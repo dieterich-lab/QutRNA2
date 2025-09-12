@@ -1,0 +1,27 @@
+pep_version: 2.0.0 # (required) DON'T CHANGE
+sample_table: sample_table.tsv # (required) path to sample description - use absolute path!
+
+# QutRNA2 specific keys
+qutrna2:
+
+ coords: sprinzl # (required) [sprinzl|seq] which coordinates to use to display in heatmap
+  sprinzl:
+    labels: # (required) path to Sprinzl labels
+    # cm or seq_to_sprinzl is required
+    cm: # path to covariance model/beegfs/homes/mpiechotta/git/QutRNA/data/TRNAinf-euk.cm
+    #
+    seq_to_sprinzl: # path to TSV with sequence to sprinzl mappings
+    map_introns: False # (defaul) [True|False] assign intron coordinates, e.g. i1,i2,...
+    ignore_trnas: ^MT # (optional) regular expression to exclude tRNAs from secondary structure alignment. If set and in config.yaml filter/ignore_trnas/apply=True, those tRNAs will be removed from BAM files
+
+  ref_fasta:
+    file: (required) path to sequence reference
+
+  linker5: 24 # (required) length of the 5'-adapter
+  linker3: 32 # (required) length of the 3'-adapter
+
+  contrasts:  # (required) define at least one contrast. Values of cond1 and cond2 must correspond to values in the condition column of sample_table.tsv!!!
+    - cond1: condition_1 # must correspond to values in the condition column of sample_table.tsv!!!
+      cond2: condition_2 # must correspond to values in the condition column of sample_table.tsv!!!
+    - cond1: condition_1 # must correspond to values in the condition column of sample_table.tsv!!!
+      cond2: condition_3 # must correspond to values in the condition column of sample_table.tsv!!!

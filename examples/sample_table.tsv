@@ -1,0 +1,5 @@
+condition	sample_name	subsample_name	base_calling	fastq
+condition_1	sample_1	subsample_1_1	pass	reads1.fastq.gz
+condition_2	sample_2	subsample_2_1	pass	reads2.fastq.gz
+condition_3	sample_3	subsample_3_1	pass	reads3.fastq.gz
+

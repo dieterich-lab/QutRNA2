@@ -1,0 +1,275 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://github.com/dieterich-lab/QutRNA/workflow/schemas/config.yaml
+title: QutRNA
+description: Config for tRNA mapping and modification discovery
+type: object
+properties:
+  pepfile:
+    type: string
+    description: Sample description
+  include:
+    type: object
+    properties:
+      ref_fasta:
+        type: string
+        enum: ["link", "copy"]
+        default: link
+      cm:
+        type: string
+        enum: ["link", "copy"]
+        default: copy
+      mods:
+        type: object
+        properties:
+          file:
+            type: string
+            enum: ["link", "copy"]
+            default: copy
+          abbrevs:
+            type: string
+            enum: ["link", "copy"]
+            default: copy
+        default: {}
+      fastq:
+        type: string
+        enum: ["link", "copy"]
+        default: link
+      bam:
+        type: string
+        enum: ["link", "copy"]
+        default: link
+    default: {}
+  transform:
+    type: object
+    properties:
+      fastq:
+        type: object
+        properties:
+          base_change:
+            type: string
+            enum: ["U2T", "T2U"]
+        default: {}
+      bam:
+        type: object
+        properties:
+          base_change:
+            type: string
+            enum: ["U2T", "T2U"]
+        default: {}
+    default: {}
+  alignment:
+    description: Use parasail or gpu for the alignment
+    type: object
+    properties:
+      precision:
+        type: number
+        description: Calibrate alignment score offset with precision
+        default: 0.999
+      min_aln_score:
+        type: integer
+        description: Minimum alignment score to considert for calibration
+        default: 10
+      random:
+        type: string
+        enum: ["rev_linker+trna", "rev_trna"]
+        default: "rev_linker+trna"
+      method:
+        type: string
+        enum: ["parasail", "gpu"]
+        default: parasail
+    default: {}
+  parasail:
+    type: object
+    properties:
+      opts:
+        type: string
+        description: Options for parasail
+        default: -a sw_trace_striped_sat -M 1 -X 1 -e 1 -o 1 -x -d -b 100000
+      lines:
+        type: integer
+        description: Number of lines to split FASTQ files.
+        default: 0
+    default: {}
+  gpu:
+    type: object
+    properties:
+      pre:
+        type: string
+        description: BASH code to execute before GPU-assisted alignment
+      bin:
+        type: string
+        default: gpu-tRNA-mapper
+      opts:
+        type: string
+        description: Options for tRNA-gpu-mapper
+        default: --scoring 1,-1,-1,-1 --batchsize 100000
+    default: {}
+  jacusa2:
+    type: object
+    description: Parameters for JACUSA2 variant calling
+    properties:
+      jar:
+        type: string
+      opts:
+        type: string
+        default: -f X:reads:nonref_ratio:insertion_ratio:deletion_ratio -u DirMult:subsampleRuns=100 -m 1 -q 1 -D -i -P1 FR-SECONDSTRAND -P2 FR-SECONDSTRAND
+      min_cov:
+        type: integer
+        default: 10
+    default: {}
+  cmalign:
+    type: object
+    properties:
+      opts:
+        type: string
+        default: --notrunc --nonbanded -g
+    default: {}
+  filter:
+    type: object
+    properties:
+      random_alignment:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+          min_aln_score:
+            type: integer
+            description: Minimum alignment score to be considered for calibration
+        default: {}
+      ignore_trnas:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+        default: {}
+      samtools:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+          filter:
+            type: string
+          calmd:
+            type: boolean
+            default: false
+        default: {}
+      read_length:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+          min:
+            type: integer
+          max:
+            type: integer
+        default: {}
+      trim_cigar:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+        default: {}
+      multimapper:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+        default: {}
+      overlap:
+        type: object
+        properties:
+          apply:
+            type: boolean
+            default: false
+          five_adapter_overlap:
+            type: number
+          trna_overlap:
+            type: number
+          three_adapter_overlap:
+            type: number
+        default: {}
+      default: {}
+  plots:
+    read_length:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          opts:
+            type: string
+        required:
+          - id
+          - opts
+    record_count:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          opts:
+            type: string
+        required:
+          - id
+          - opts
+    threshold_summary:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          opts:
+            type: string
+        required:
+          - id
+          - opts
+    heatmap:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          group:
+            type: string
+            enum: ["amino_acid", "anti_codon", "amnio_acid,anti_codon"]
+          score:
+            type: string
+            default: "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
+          harmonize_scaling:
+            type: string
+            default: NONE
+            pattern: ^NONE|MAX_SCORE|CONTRASTS|OVERALL|\d+(\.\d+)?$
+          trnas:
+            type: array
+            items:
+              type: string
+          positions:
+            type: array
+            items:
+              type: string
+          opts:
+            type: string
+        default: {}
+        required:
+          - id
+          - group
+          - score
+          - harmonize_scaling
+  call_filtered:
+    type: boolean
+    default: false
+default: {}
+required:
+  - pepfile

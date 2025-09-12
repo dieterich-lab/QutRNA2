@@ -1,0 +1,103 @@
+description: QutRNA
+imports:
+  - http://schema.databio.org/pep/2.0.0.yaml
+properties:
+  samples:
+    type: array
+    items:
+      type: object
+      properties:
+        condition:
+          type: string
+        subsample_name:
+          type: string
+        base_calling:
+          type: string
+        fastq:
+          type: string
+        bam:
+          type: string
+      required:
+        - condition
+        - sample_name
+        - subsample_name
+        - base_calling
+      files:
+        - fastq
+        - bam
+  config:
+    type: object
+    properties:
+      qutrna2:
+        type: object
+        properties:
+          coords:
+            type: string
+            enum: ["seq", "sprinzl"]
+            description: Coordinate system
+            default: seq
+          sprinzl:
+            type: object
+            properties:
+              cm:
+                type: string
+              labels:
+                type: string
+              seq_to_sprinzl:
+                type: string
+              map_introns:
+                type: boolean
+                default: false
+              ignore_trnas:
+                type: string
+            default: {}
+          ref_fasta:
+            type: object
+            properties:
+              file:
+                type: string
+          mods:
+            type: object
+            description: Known modifications
+            properties:
+              file:
+                type: string
+              abbrevs:
+                type: string
+            files:
+              - file
+              - abbrevs
+            required:
+              - file
+          linker5:
+            type: integer
+            description: Length of 5' linker
+          linker3:
+            type: integer
+            description: Length of 3' linker
+          trna_annotation:
+            type: string
+          contrasts:
+            type: array
+            properties:
+              cond1:
+                type: string
+              cond2:
+                type: string
+              flag:
+                type: array
+                items:
+                  type: string
+                uniqueItems: true
+            required:
+              - cond1
+              - cond2
+        required:
+          - linker5
+          - linker3
+        default: {}
+    required:
+      - qutrna2
+    default: {}
+required:
+  - samples

@@ -1,0 +1,82 @@
+# if "alignment" is set, "method" must be provided
+# if "alignment" is NOT set, no alignment will be performed, and sample_desc.tsv is expected to have a "bam" column with paths to BAM files
+alignment:
+  method: gpu # (required) [gpu|parasail]
+  precision: 0.999 # (default) Calibrate alignment score threshold with the following precision
+  min_aln_score: 10 # (default) Minimum alignment score to consider
+  
+
+gpu:
+  pre: "" (default) # Put any BASH code here to init GPU 
+  bin: gpu-tRNA-mapper # (default) path to gpu-tRNA-mapper
+
+
+jacusa2:
+  jar: java -jar PATH/JACUSA_v2.1.15-RC.jar # (required) Path to JACUSA2 
+
+
+# (optional) transform FASTQ RNA to DNA by replacing Us with Ts
+transform:
+  fastq:
+    base_change: U2T
+
+
+# list of successive filters to apply to mapped data
+# To deactivate a filter, either remove the filter key or set apply to False
+filter:
+  random_alignment: # (Recommended) This will filter random alignments
+    apply: True # [True|False]
+
+  ignore_trnas:	# (Optional) used to filter tRNAs that are ignored from secondary structure alignment. Check key qutrna/sprinzl/ignore_trnas in your "data.yaml"
+    apply: True
+
+  adapter_overlap: (Optional) used to retain reads that overlap with the adapter as indicated.
+    apply: True
+    five_linker_overlap: 0.2 # [0.0 - 1.0] required fraction of overlap with 5'-adapter
+    three_linker_overlap: 0.2 # [0.0 - 1.0] necessary overlap fraction with 3'-adapter
+
+  multimapper: (Optional) used to remove reads mapping to multiple locations with the same alignment score
+    apply: True
+
+
+call_filtered: False # (Optional) Set to True to run JACUSA2 after each filtering step - (slow).
+
+
+# define custom plots
+plots:
+  read_length: # custom plots for read length.
+    - id: zoom_condition # the id will be used to create the filename of the plot: "results/plots/read_length_custom/{id}.pdf"
+      opts: --limits 1,250 --type condition # opts to be forwarded to "workflow/scripts/plot_read_length.R"; will plot read length [1, 250] per condition
+    - id: zoom_sample
+      opts: --limits 1,250 --type sample # will plot read length [1, 250] per sample
+    - id: zoom_subsample
+      opts: --limits 1,250 --type subsample # will plot read length [1, 250] per subsample
+    - id: outlier_condition
+      opts: --limits 251,NA --type condition # will plot read length [251, Infinity] per condition
+    - id: outlier_sample
+      opts: --limits 251,NA --type sample # see above
+    - id: outlier_subsample
+      opts: --limits 251,NA --type subsample # see above
+
+  record_count: # custom plots for record counts
+    - id: show_percent # the id will be used to create the filename of the plot: "results/plots/read_count/{id}.pdf"
+      opts: --show_percent # opts to be forwarded to "workflow/scripts/plot_record_count.R"
+
+  # custom plots of score profiles
+  heatmap:
+    - id: all_trnas_MDI-subsampled # (Required) the id will be used to create the dirname of the plot: "results/plots/scores/{id}/heatmap.pdf"
+      title: '{condition1}, {condition2}, {score}, {bam_type}, {position_column}, {anti_codon}, {amino_acid}' # (Optional) define a title to be shown in the plot.
+      # opts to be forwarded to "workflow/scripts/plot_heatmap.R", 
+      # here: 
+      #  --estimate_coverage -> an additional plots with coverage info will be generated,
+      #  --sort_by trna -> tRNAs will be sorted by name,
+      #  --hide_varm -> the variable arm will be hidden.
+      # see workflow/scripts/plot_heatmap.R for more options
+      opts: "--estimate_coverage --sort_by trna --hide_varm" 
+      # This defines the score type of the profile.
+      # Use "MDI::mismatch_score+deletion_score+insertion_score" for the old score or
+      # "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled" for subsampled scores.
+      score: "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled" (default)
+
+
+
