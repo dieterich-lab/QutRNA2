@@ -149,7 +149,7 @@ snakemake \
 	--use-conda \
 	--configfiles <ANALYSIS_YAML> \
         --config pepfile=<DATA_YAML> \
-        --directory <ANALYSIS_OUTPUT>
+        --directory <ANALYSIS_OUTPUT> \
 	-n 
 ```
 You should see a list of necessary jobs to be run.
