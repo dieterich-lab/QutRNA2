@@ -34,7 +34,7 @@ If no compatible GPU is present, QutRNA2 can be used with [parasail](https://git
 ## Installation
 We recommend the following installation order:
 
-1. [QutRNA](https://github.com/dieterich-lab/QutRNA2)
+1. [QutRNA2](https://github.com/dieterich-lab/QutRNA2)
 2. [JACUSA2 2.1.15](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar)
 3. [parasail v2.6.2](https://github.com/jeffdaily/parasail/archive/refs/tags/v2.6.2.tar.gz)
 4. [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper)
