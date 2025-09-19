@@ -60,7 +60,7 @@ conda activate qutrna2
 Make sure to activate the environment when you build the other dependencies!
 
 ### JACUSA2
-Download [JACUSA2 2.1.15]([https://github.com/dieterich-lab/JACUSA2TODO](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar)) and store the JAR on your local computer. Put the JAR into a directory in your PATH or remember the location <JACUSA2_LOCAL_JAR> for later configuration.
+Download [JACUSA2 2.1.15](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar) and store the JAR on your local computer. Put the JAR into a directory in your PATH or remember the location <JACUSA2_LOCAL_JAR> for later configuration.
 
 ### parasail
 First, download the source code from parasail [v2.6.2.tar.gz](https://github.com/jeffdaily/parasail/archive/refs/tags/v2.6.2.tar.gz), store it in <PARASAIL-LOCAL-DIR>, and unpack it.
