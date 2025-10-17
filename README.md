@@ -4,7 +4,7 @@ Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
 ## New Features
 
-QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.15](https://github.com/dieterich-lab/JACUSA2/) is included that features subsampled scores that improve the signal-to-noise ratio when identifying tRNA modifications.
+QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.15](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar) is included that features subsampled scores that improve the signal-to-noise ratio when identifying tRNA modifications.
 
 Finally, a filter framework has been added to the analysis workflow to remove spurious alignments by applying the following filters:
 
@@ -74,7 +74,7 @@ Second, define your `<DATA_YAML>`. This file describes what reference and Sprinz
 For eukaryotic nuclear tRNAs, we use the following covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and labeling `data/nuclear-euk-masked.txt`.
 
 For human mt-tRNAs, we use the sequence to Sprinzl mapping in [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6) 
-and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`. If you provide your own labels, ensure the first label is a "-"!
+and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`. If you provide labels, ensure the first label is a "-"!
 
 It is crucial to obtain covariance models for the organism and tRNAs studied. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
 
@@ -95,7 +95,7 @@ snakemake \
 	--use-conda \
 	--configfiles <ANALYSIS_YAML> \
         --config pepfile=<DATA_YAML> \
-        --directory <ANALYSIS_OUTPUT>
+        --directory <ANALYSIS_OUTPUT> \
 	-n 
 ```
 You should see a list of necessary jobs to be run.
