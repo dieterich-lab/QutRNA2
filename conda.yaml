@@ -1,0 +1,32 @@
+name: qutrna2
+channels:
+  - fkallen
+  - piechottam
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - gpu-trna-mapper
+  - JACUSA2=2.1.15
+  - bioconductor-summarizedexperiment
+  - bioconductor-rsamtools
+  - r-base
+  - r-curl
+  - r-data.table
+  - r-tidyr
+  - r-ggplot2
+  - r-dplyr
+  - r-stringr
+  - r-optparse
+  - r-patchwork
+  - r-tinytex
+  - r-yardstick
+  - infernal
+  - click
+  - pysam
+  - biopython
+  - pandas
+  - samtools
+  - snakemake=9.8
+  - snakemake-executor-plugin-slurm
+prefix: /home/mpiechotta/miniconda3/envs/qutrna2

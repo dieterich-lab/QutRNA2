@@ -32,14 +32,8 @@ In brief, a CUDA-capable GPU with Volta architecture or newer is recommended.
 If no compatible GPU is present, QutRNA2 can be used with [parasail](https://github.com/jeffdaily/parasail) but will run much slower.
 
 ## Installation
-We recommend the following installation order:
 
-1. [QutRNA2](https://github.com/dieterich-lab/JACUSA2
-2. [JACUSA2 2.1.15](https://github.com/dieterich-lab/JACUSA2)
-3. [parasail v2.6.2](https://github.com/jeffdaily/parasail/archive/refs/tags/v2.6.2.tar.gz)
-4. [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper)
-
-### QutRNA2
+We provide a conda file with all necessary packages. 
 Clone the repository and install the requirements with [conda](https://docs.conda.io/en/latest/).
 
 Go to your desired `<QUTRNA2-LOCAL-DIR>` and clone the repository:
@@ -51,61 +45,13 @@ git clone https://github.com/dieterich-lab/QutRNA2
 Next, install all the requirements: 
 ```console
 cd QutRNA2
-conda env create -f conda-lock.yaml -n qutrna2
+conda env create -f conda.yaml -n qutrna2
 ```
+
 Finally, activate the environment:
 ```console
 conda activate qutrna2
 ```
-Make sure to activate the environment when you build the other dependencies!
-
-### JACUSA2
-Download [JACUSA2 2.1.15]([https://github.com/dieterich-lab/JACUSA2TODO](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar)) and store the JAR on your local computer. Put the JAR into a directory in your PATH or remember the location <JACUSA2_LOCAL_JAR> for later configuration.
-
-### parasail
-First, download the source code from parasail [v2.6.2.tar.gz](https://github.com/jeffdaily/parasail/archive/refs/tags/v2.6.2.tar.gz), store it in <PARASAIL-LOCAL-DIR>, and unpack it.
-```console
-cd <PARASAIL-LOCAL-DIR>
-tar xzvpf v2.6.2.tar.gz
-```
-The `<PARASAIL-LOCAL-DIR>/parasail-2.6.2` directory is essential for later use. It contains the source code of [parasail](https://github.com/jeffdaily/parasail/).
-
-Now, you can build [parasail](https://github.com/jeffdaily/parasail/):
-```console
-cd <PARASAIL-LOCAL-DIR>/parasail-2.6.2
-mkdir build
-cd build
-cmake .. 
-make
-cd ../..
-```
-
-### gpu-tRNA-mapper
-Install the [Software Requirements](https://github.com/fkallen/gpu-tRNA-mapper?tab=readme-ov-file#software-requirements) before building the [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper).
-
-Once you have installed a CUDA toolkit and C++17 compiler, you can clone the [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) repository:
-```console
-cd <GPU-TRNA-MAPPER-LOCAL-DIR>
-git clone --recurse-submodules git@github.com:fkallen/gpu-tRNA-mapper.git
-```
-
-Check the [Setup](https://github.com/fkallen/gpu-tRNA-mapper?tab=readme-ov-file#setup) for details on configuring and building from source.
-
-When you are in `<GPU-TRNA-MAPPER-LOCAL-DIR>`, you can start building the gpu-tRNA-mapper - use `<PARASAIL-LOCAL-DIR>` from building parasail:
-```console
-make \
-	PARASAIL_INCLUDE_DIR=<PARASAIL-LOCAL-DIR>/parasail-2.6.2/include \
-	PARASAIL_LIB_DIR=<PARASAIL-LOCAL-DIR>/parasail-2.6.2/lib \
-	TARGET_GPU_ARCH=all 
-```
-
-Finally, install the mapper to `<GPU-TRNA-MAPPER-PATH>`:
-```console
-make install <GPU-TRNA-MAPPER-PATH>/bin
-```
-
-The binary is called `gpu-tRNA-mapper`.
-
 
 ## Setup QutRNA2 analysis
 QutRNA2 uses YAML files to define the data (data.yaml) and parametrize the analysis (analysis.yaml). Finally, a TSV file provides the sample description.
@@ -144,7 +90,7 @@ conda activate qutrna2
 Use `<ANALYSIS_OUTPUT>` folder to define where QutRNA2 should write the output to:
 ```console
 snakemake \
-        -c 1 \
+    -c 1 \
  	--snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
 	--use-conda \
 	--configfiles <ANALYSIS_YAML> \
@@ -158,7 +104,7 @@ You should increase "-c 1" to whatever suits your computing machine.
 Now, you can start the analysis (remove "-n")
 ```console
 snakemake \
-        -c 1 \
+    -c 1 \
  	--snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
 	--use-conda \
 	--configfiles <ANALYSIS_YAML> \

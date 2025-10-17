@@ -3,6 +3,8 @@ import enum
 import gzip
 import re
 import pandas as pd
+from collections import defaultdict
+from os.path import commonprefix
 from mimetypes import guess_type
 from functools import partial
 from Bio import SeqIO
@@ -86,14 +88,17 @@ def reverse(fasta, linker5, linker3, output):
             SeqIO.write(record, fout, "fasta")
 
 @cli.command()
+@click.option("-5", "--linker5", type=str)
+@click.option("-3", "--linker3", type=str)
 @click.option("--remove-linker5", type=int)
 @click.option("--remove-linker3", type=int)
 @click.option("-c", "--base-change", type = click.Choice(BaseChange, case_sensitive=False), help="Base change: U2T or T2U.")
 @click.option("-i", "--ignore", type=str)
 @click.option("-r", "--reverse", is_flag=True, default=False, help="Reverse sequence.")
+@click.option("-u", "--unique-seq", is_flag=True, default=False, help="Only unique sequences.")
 @click.option("-o", "--output", required=True, type=click.Path())
 @click.argument("FASTA", type=click.Path())
-def transform(fasta, remove_linker5, remove_linker3, base_change, ignore, reverse, output):
+def transform(fasta, linker5, linker3, remove_linker5, remove_linker3, base_change, ignore, reverse, unique_seq, output):
     """Transform fasta"""
 
     tasks = []
@@ -111,9 +116,25 @@ def transform(fasta, remove_linker5, remove_linker3, base_change, ignore, revers
     if reverse:
         tasks.append(do_reverse)
 
+    if linker5:
+      def helper(record):
+        record.seq = f"{linker5}{str(record.seq)}"
+
+        return(record)
+      tasks.append(helper)
+    if linker3:
+      def helper(record):
+        record.seq = f"{record.seq}{linker3}"
+
+        return(record)
+      tasks.append(helper)
+
     records = read_records(fasta)
     if ignore:
-        records = ignore_trnas(records, ignore)
+      records = ignore_trnas(records, ignore)
+
+    if unique_seq:
+      records = unique_trna_seq(records)
 
     with open_out(output) as fout:
         for record in records.values():
@@ -143,26 +164,55 @@ def ignore_trnas(records, ignore):
     return filtered
 
 
+def normalize_trna_ids(trna_ids: list):
+  if len(trna_ids) == 1:
+    return trna_ids[0]
+
+  common = commonprefix(trna_ids)
+  diff = sorted([trna_id.replace(common, "") for trna_id in trna_ids])
+  new_id = ",".join(diff)
+
+  return f"{common}{new_id}"
+
+
+def unique_trna_seq(records):
+  trna_seq_to_id = defaultdict(set)
+  for trna_id, record in records.items():
+    trna_seq_to_id[str(record.seq)].add(trna_id)
+
+  # normalize labels
+  new_records = {}
+  for trna_seq, trna_ids in trna_seq_to_id.items():
+    trna_id = normalize_trna_ids(list(trna_ids))
+    record = records[list(trna_ids)[0]]
+    record.id = trna_id
+    record.name = trna_id
+    record.description = ""
+    new_records[trna_id] = record
+
+  return new_records
+
+
 @cli.command()
 @click.option("-o", "--output", type=click.Path())
 @click.argument("FASTA", type=click.Path(exists=True))
 def infer_annotation(fasta, output):
-    """Infer tRNA annotation from fasta"""
+  """Infer tRNA annotation from fasta"""
 
-    trnas = read_records(fasta)
+  trnas = read_records(fasta)
 
-    df = pd.DataFrame.from_dict({"trna": trnas.keys()})
+  df = pd.DataFrame.from_dict({"trna": trnas.keys()})
 
-    df["type"] = "unknown"
-    is_mt = df["trna"].str.startswith("MT")
-    df["type"][is_mt] = "mt"
-    df["type"][~is_mt] = "nuclear"
+  df["type"] = "unknown"
+  is_mt = df["trna"].str.startswith("MT")
+  df["type"][is_mt] = "mt"
+  df["type"][~is_mt] = "nuclear"
 
-    info = df["trna"].str.extract(r'.*tRNA-(?P<amino_acid>[^-]+)-(?P<anti_codon>[A-Z]+)')
-    df = pd.concat([df, info], axis=1)
-    df["seq"] = [str(record.seq).upper().replace("T", "U") for record in trnas.values()]
+  info = df["trna"].str.extract(r'.*tRNA-(?P<amino_acid>[^-]+)-(?P<anti_codon>[A-Z]+)')
+  df = pd.concat([df, info], axis=1)
+  df["seq"] = [str(record.seq).upper().replace("T", "U") for record in trnas.values()]
 
-    df.to_csv(output, index=False, sep="\t")
+  df.to_csv(output, index=False, sep="\t")
 
 if __name__ == "__main__":
     cli()
