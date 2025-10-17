@@ -16,6 +16,7 @@ dependencies:
   - r-tidyr
   - r-ggplot2
   - r-dplyr
+  - r-knitr
   - r-stringr
   - r-optparse
   - r-patchwork
