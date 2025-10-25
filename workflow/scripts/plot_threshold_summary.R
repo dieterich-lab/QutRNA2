@@ -99,7 +99,7 @@ for (cond in unique(scores$condition)) {
     ylim(0, count_lim[2] + 1) +
     geom_col(alpha = .6, position = "identity") +
     geom_vline(data = filtered_cutoffs, aes(xintercept = cutoff), colour = "red") +
-    geom_text(data = filtered_cutoffs, aes(x = cutoff, y = I(0.5), label = label), colour = "red", hjust = -.1) +
+    geom_text(data = filtered_cutoffs, aes(x = cutoff, y = I(0.5), label = label), size.unit = "pt", colour = "red", hjust = -.1) +
     theme_bw(base_size = 18) +
     facet_grid(sample_desc ~ condition)
   if (is.null(plots)) {

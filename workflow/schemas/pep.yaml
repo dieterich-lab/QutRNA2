@@ -31,6 +31,10 @@ properties:
       qutrna2:
         type: object
         properties:
+          title:
+            type: string
+          description:
+            type: string
           coords:
             type: string
             enum: ["seq", "sprinzl"]

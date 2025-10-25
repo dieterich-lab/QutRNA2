@@ -1,0 +1,48 @@
+---
+title: {{ pep["project"]["qutrna2"]["title"] }}
+author: Generated with <a href="https://github.com/dieterich-lab/QutRNA2" target="_blank">QutRNA2"</a>
+---
+
+<style>
+table {
+  font-family: arial, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+td, th {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+tr:nth-child(even) {
+  background-color: #dddddd;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+
+<a href="https://github.com/dieterich-lab/QutRNA2" target="_blank">
+```{r, echo=FALSE}
+htmltools::img(src = "{{ basedir }}/report/lab_logo.png",
+               alt = "logo",
+               style = "width: 90px; float: left; padding:10px;")
+```
+</a>
+
+<br/>
+<br/>
+
+{% if "description" in pep["project"]["qutrna2"] %}
+<h3>Project description</h3>
+{{ pep["description"] }}
+{% endif %}
+
+<h4> Report created: `r format(Sys.time(), format = "%Y-%m-%d %H:%M")`</h4>
+
+# {.tabset}
+```{r, child=c("preprocessing.Rmd", "results.Rmd", "data_config.Rmd")}
+```

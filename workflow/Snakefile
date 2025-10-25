@@ -1,8 +1,9 @@
+import pandas as pd
 import os
 from snakemake.io import expand
 
 
-VERSION = "2.0.0-DEV-12"
+VERSION = "2.0.0-DEV-13"
 
 pepfile: config["pepfile"]
 pepschema: "schemas/pep.yaml"
@@ -32,10 +33,13 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   include: "rules/sec_structure.smk"
 include: "rules/plot.smk"
 include: "rules/info.smk"
+include: "rules/report.smk"
 
-
+ruleorder: fastq_read_count > samtools_record_count
+ruleorder: fastq_read_length > samtools_read_length
 
 ########################################################################################################################
+
 
 def target_info():
   targets = [
@@ -85,7 +89,7 @@ def target_all():
 ########################################################################################################################
 
 rule all:
-  input: lambda wildcards: target_all() + target_info()
+  input: lambda wildcards: target_all() + target_info() + target_report()
 
 ########################################################################################################################
 
@@ -106,6 +110,11 @@ if READS == "fastq":
 
 ########################################################################################################################
 
+def target_report():
+  return ["results/report/report.html", ]
+
+########################################################################################################################
+
 if pep.config["qutrna2"]["coords"] == "sprinzl":
   def target_sprinzl():
     return [
@@ -116,25 +125,13 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
 
 ########################################################################################################################
 
+
 def target_read_feature_plots():
-  targets = []
+  # flatten nested dict and convert to list
+  pdf_targets = flatten_dict(get_read_feature_plots("pdf"))
+  rds_targets = flatten_dict(get_read_feature_plots("rds"))
 
-  # default overview plots of read features
-  types = ["condition", "sample", "subsample"]
-  targets.extend(expand("results/plots/record_count/{type}.pdf", type=types))
-  targets.extend(expand("results/plots/read_length/{type}.pdf", type=types))
-
-  # custom read feature specific plots
-  for feature in ["read_length", "record_count"]:
-    for plot in config["plots"].get(feature, []):
-      targets.append(f"results/plots/{feature}/custom/{plot['id']}.pdf")
-
-  if READS == "fastq":
-    targets.append("results/plots/alignment/threshold_summary.pdf")
-    for plot in config["plots"].get("threshold_summary", []):
-      targets.append(f"results/plots/alignment/threshold_summary/custom/{plot['id']}.pdf")
-
-  return targets
+  return list(pdf_targets) + list(rds_targets)
 
 
 rule read_feature_plots:

@@ -1,0 +1,49 @@
+## Results {.tabset}
+
+{% for cond1, d_A in rds["heatmap"].items() %}
+{% set cond1_loop = loop %}
+
+{% for cond2, d_B in d_A.items() %}
+{% if cond1_loop.index == 1 and loop.index == 1%}
+### **Contrast:**{{ cond1 }} vs. {{ cond2 }} {.tabset}
+{% else %}
+### {{ cond1 }} vs. {{ cond2 }} {.tabset}
+{% endif %}
+
+{% for plot_id, d_C in d_B.items() %}
+
+{% if loop.index == 1 %}
+#### **Plot ID:** {{ plot_id }} {.tabset}
+{% else %}
+#### {{ plot_id }} {.tabset}
+{% endif %}
+
+
+{% for bam_type, d_D in d_C.items() %}
+
+{% if loop.index == 1 %}
+##### **Bam type:** {{ bam_type }} {.tabset}
+{% else %}
+##### {{ bam_type }} {.tabset}
+{% endif %}
+
+{% for group, fname in d_D.items() %}
+{% if group == "_" %}
+{% set group = "all" %}
+{% endif %}
+{% if loop.index == 1 %}
+###### **tRNAs:** {{ group}} {.tabset}
+{% else %}
+###### {{ group}} {.tabset}
+{% endif %}
+```{r, fig-heatmap-{{ cond1 }}-vs-{{ cond2 }}-{{ plot_id }}-{{ bam_type }}-{{ group }}, fig.align = "center", out.width = "100%"}
+p <- readRDS("../../{{ fname }}")
+p <- p & theme(legend.position = "bottom")
+print(p)
+```
+
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}

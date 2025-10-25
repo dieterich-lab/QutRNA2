@@ -184,6 +184,7 @@ dependencies:
   - openssl=3.5.4=h26f9b46_0
   - packaging=25.0=pyh29332c3_1
   - pandas=2.3.3=py312hf79963d_1
+  - pandoc=3.8.2.1=ha770c72_0
   - pango=1.56.4=hadf4263_0
   - parasail=2.6.2=h5ca1c30_1
   - pcre2=10.46=h1321c63_0
@@ -216,21 +217,29 @@ dependencies:
   - r-abind=1.4_8=r44hc72bb7e_1
   - r-askpass=1.2.1=r44h54b55ab_1
   - r-base=4.4.3=h14df4e6_4
+  - r-base64enc=0.1_3=r44h54b55ab_1008
   - r-bh=1.87.0_1=r44hc72bb7e_1
   - r-bitops=1.0_9=r44h54b55ab_1
+  - r-bslib=0.9.0=r44hc72bb7e_1
+  - r-cachem=1.1.0=r44h54b55ab_2
   - r-cli=3.6.5=r44h3697838_1
   - r-codetools=0.2_20=r44hc72bb7e_2
   - r-colorspace=2.1_2=r44h54b55ab_0
+  - r-commonmark=2.0.0=r44h54b55ab_1
   - r-cpp11=0.5.2=r44h785f33e_2
   - r-crayon=1.5.3=r44hc72bb7e_2
   - r-curl=7.0.0=r44h10955f1_1
   - r-data.table=1.17.8=r44h1c8cec4_1
+  - r-digest=0.6.37=r44h3697838_1
   - r-dplyr=1.1.4=r44h3697838_2
   - r-ellipsis=0.3.2=r44h54b55ab_4
   - r-evaluate=1.0.5=r44hc72bb7e_1
   - r-fansi=1.0.6=r44h54b55ab_2
   - r-farver=2.1.2=r44h3697838_2
+  - r-fastmap=1.2.0=r44h3697838_2
+  - r-fontawesome=0.5.3=r44hc72bb7e_1
   - r-formatr=1.14=r44hc72bb7e_3
+  - r-fs=1.6.6=r44h3697838_1
   - r-futile.logger=1.4.3=r44hc72bb7e_1007
   - r-futile.options=1.0.1=r44hc72bb7e_1006
   - r-generics=0.1.4=r44hc72bb7e_1
@@ -240,17 +249,22 @@ dependencies:
   - r-gtable=0.3.6=r44hc72bb7e_1
   - r-hardhat=1.4.2=r44hc72bb7e_1
   - r-highr=0.11=r44hc72bb7e_2
+  - r-htmltools=0.5.8.1=r44h3697838_2
   - r-httr=1.4.7=r44hc72bb7e_2
   - r-isoband=0.2.7=r44h3697838_4
+  - r-jquerylib=0.1.4=r44hc72bb7e_4
   - r-jsonlite=2.0.0=r44h54b55ab_1
   - r-knitr=1.50=r44hc72bb7e_1
   - r-labeling=0.4.3=r44hc72bb7e_2
   - r-lambda.r=1.2.4=r44hc72bb7e_5
   - r-lattice=0.22_7=r44h54b55ab_1
   - r-lifecycle=1.0.4=r44hc72bb7e_2
+  - r-litedown=0.7=r44hc72bb7e_1
   - r-magrittr=2.0.4=r44h54b55ab_0
+  - r-markdown=2.0=r44hc72bb7e_1
   - r-matrix=1.7_4=r44h0e4624f_1
   - r-matrixstats=1.5.0=r44h54b55ab_1
+  - r-memoise=2.0.1=r44hc72bb7e_4
   - r-mime=0.13=r44h54b55ab_1
   - r-munsell=0.5.1=r44hc72bb7e_2
   - r-openssl=2.3.4=r44h50f7d53_0
@@ -260,9 +274,12 @@ dependencies:
   - r-pkgconfig=2.0.3=r44hc72bb7e_5
   - r-purrr=1.1.0=r44h54b55ab_1
   - r-r6=2.6.1=r44hc72bb7e_1
+  - r-rappdirs=0.3.3=r44h54b55ab_4
   - r-rcolorbrewer=1.1_3=r44h785f33e_4
   - r-rlang=1.1.6=r44h3697838_1
+  - r-rmarkdown=2.30=r44hc72bb7e_0
   - r-s7=0.2.0=r44h54b55ab_1
+  - r-sass=0.4.10=r44h3697838_1
   - r-scales=1.4.0=r44hc72bb7e_1
   - r-snow=0.4_4=r44hc72bb7e_4
   - r-sparsevctrs=0.3.4=r44h54b55ab_1

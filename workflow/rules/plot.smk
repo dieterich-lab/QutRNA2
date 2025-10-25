@@ -1,7 +1,9 @@
+import pandas as pd
 from snakemake.io import directory, unpack
 
 global DEFAULT_SCORE
 global REF_FASTA
+global READS
 global SCORES
 global SPRINZL_LABELS
 global TRNA_ANNOTATION
@@ -11,6 +13,56 @@ global MAX_SCORES
 ################################################################################
 # Plot JACUSA2 score: Mis+Del+Ins
 ################################################################################
+
+
+def get_read_feature_plots(ftype):
+  # return container
+  plots = {}
+
+  features = ["record_count", "read_length"]
+  types = ["condition", "sample", "subsample"]
+  for feature in features:
+    plots.setdefault(feature, {})
+    # default overview plots of read features
+    for type in types:
+      plots[feature][type] = f"results/plots/{feature}/{type}.{ftype}"
+    # custom read feature specific plots
+    plots[feature]["custom"] = {}
+    for plot in config["plots"].get(feature, []):
+      plots[feature]["custom"][plot["id"]] = f"results/plots/{feature}/custom/{plot['id']}.{ftype}"
+
+  if READS == "fastq":
+    plots["threshold_summary"] = {
+      "default": f"results/plots/alignment/threshold_summary.{ftype}"
+    }
+    plots["threshold_summary"]["custom"] = {}
+    for plot in config["plots"].get("threshold_summary", []):
+      plots["threshold_summary"]["custom"] = f"results/plots/alignment/threshold_summary/custom/{plot['id']}.{ftype}"
+
+  return plots
+
+
+def get_heatmap_plots(ftype):
+  plots = {}
+
+  contrasts = pep.config["qutrna2"]["contrasts"]
+  bam_types = []
+  if config["call_filtered"]:
+    bam_types = [f"filtered-{f}" for f in FILTERS_APPLIED]
+  bam_types.append("final")
+  for plot in config["plots"]["heatmap"]:
+    plot_id = plot["id"]
+    for contrast in contrasts:
+      cond1 = contrast["cond1"]
+      cond2 = contrast["cond2"]
+      for bam_type in bam_types:
+        fname = f"results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv"
+        df = pd.read_csv(fname, sep="\t")
+        df = df[df["type"] == "rds"]
+        for row in df.itertuples(index=False):
+          plots.setdefault(cond1, {}).setdefault(cond2, {}).setdefault(plot_id, {}).setdefault(bam_type, {})[row.group] = row.name
+
+  return plots
 
 
 def get_plot(plot_type, plot_id):
@@ -88,9 +140,10 @@ def _plot_heatmap_input(wildcards):
   return input
 
 
-rule plot_heatmap:
+checkpoint plot_heatmap:
   input: unpack(_plot_heatmap_input)
-  output: dir=directory("results/plots/scores/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}")
+  output: dir=directory("results/plots/scores/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}"),
+          files="results/plots/scores/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}/files.tsv"
   conda: "qutrna2"
   log: "logs/plot/heatmap/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}.log"
   params: opts=_plot_heatmap_opts,
@@ -112,7 +165,8 @@ rule plot_heatmap:
 
 rule plot_record_count:
   input: "results/stats/record_count.txt"
-  output: "results/plots/record_count/{FEATURE}.pdf"
+  output: pdf="results/plots/record_count/{FEATURE}.pdf",
+          rds="results/plots/record_count/{FEATURE}.rds",
   conda: "qutrna2"
   log: "logs/plot/record_count/{FEATURE}.log"
   params: basedir=workflow.basedir
@@ -120,12 +174,13 @@ rule plot_record_count:
     export QUTRNA2="{params.basedir}"
     Rscript {workflow.basedir}/scripts/plot_record_count.R \
          --type {wildcards.FEATURE} \
-         --output {output:q} {input:q} \
+         --output {output.pdf:q} {input:q} \
          2> {log:q}
   """
 rule plot_record_count_custom:
   input: "results/stats/record_count.txt"
-  output: "results/plots/record_count/custom/{plot_id}.pdf"
+  output: pdf="results/plots/record_count/custom/{plot_id}.pdf",
+          rds="results/plots/record_count/custom/{plot_id}.rds"
   conda: "qutrna2"
   log: "logs/plot/read_record_custom/{plot_id}.log"
   params: opts= lambda wildcards: get_plot("record_count", wildcards.plot_id).get("opts",""),
@@ -134,14 +189,15 @@ rule plot_record_count_custom:
     export QUTRNA2="{params.basedir}"
     Rscript {workflow.basedir}/scripts/plot_record_count.R \
          {params.opts} \
-         --output {output:q} {input:q} \
+         --output {output.pdf:q} {input:q} \
          2> {log:q}
   """
 
 
 rule plot_read_length:
   input: "results/stats/read_length.txt"
-  output: "results/plots/read_length/{FEATURE}.pdf"
+  output: pdf="results/plots/read_length/{FEATURE}.pdf",
+          rds="results/plots/read_length/{FEATURE}.rds"
   conda: "qutrna2"
   log: "logs/plot/read_length/{FEATURE}.log"
   params: basedir=workflow.basedir
@@ -149,12 +205,13 @@ rule plot_read_length:
     export QUTRNA2="{params.basedir}"
     Rscript {workflow.basedir}/scripts/plot_read_length.R \
          --type {wildcards.FEATURE} \
-         --output {output:q} {input:q} \
+         --output {output.pdf:q} {input:q} \
          2> {log:q}
   """
 rule plot_read_length_custom:
   input: "results/stats/read_length.txt"
-  output: "results/plots/read_length/custom/{plot_id}.pdf"
+  output: pdf="results/plots/read_length/custom/{plot_id}.pdf",
+          rds="results/plots/read_length/custom/{plot_id}.rds"
   conda: "qutrna2"
   log: "logs/plot/read_length_custom/{plot_id}.log"
   params: opts=lambda wildcards: get_plot("read_length", wildcards.plot_id).get("opts", ""),
@@ -163,7 +220,7 @@ rule plot_read_length_custom:
     export QUTRNA2="{params.basedir}"
     Rscript {workflow.basedir}/scripts/plot_read_length.R \
          {params.opts} \
-         --output {output:q} {input:q} \
+         --output {output.pdf:q} {input:q} \
          2> {log:q}
   """
 
@@ -171,7 +228,8 @@ rule plot_read_length_custom:
 rule plot_threshold_summary:
   input: score="results/stats/alignment_score.txt",
          cutoff="results/stats/cutoff.txt"
-  output: "results/plots/alignment/threshold_summary.pdf"
+  output: pdf="results/plots/alignment/threshold_summary.pdf",
+          rds="results/plots/alignment/threshold_summary.rds"
   conda: "qutrna2"
   log: "logs/plot/threshold_summary.log"
   params: bam_types=",".join(["mapped", "mapped-random"]),
@@ -181,14 +239,15 @@ rule plot_threshold_summary:
     Rscript {workflow.basedir}/scripts/plot_threshold_summary.R \
          --type {params.bam_types:q} \
          --cutoff {input.cutoff:q} \
-         --output {output:q} \
+         --output {output.pdf:q} \
          {input.score:q} \
          2> {log:q}
   """
 rule plot_threshold_summary_custom:
   input: score="results/stats/alignment_score.txt",
     cutoff="results/stats/cutoff.txt"
-  output: "results/plots/alignment/threshold_summary/custom/{plot_id}.pdf"
+  output: pdf="results/plots/alignment/threshold_summary/custom/{plot_id}.pdf",
+          rds="results/plots/alignment/threshold_summary/custom/{plot_id}.rds"
   conda: "qutrna2"
   log: "logs/plot/threshold_summary_custom/{plot_id}.log"
   params: opts=lambda wildcards: get_plot("threshold_summary", wildcards.plot_id).get("opts", ""),
@@ -200,7 +259,7 @@ rule plot_threshold_summary_custom:
          {params.opts} \
          --type {params.bam_types:q} \
          --cutoff {input.cutoff:q} \
-         --output {output:q} \
+         --output {output.pdf:q} \
          {input.score:q} \
          2> {log:q}
   """

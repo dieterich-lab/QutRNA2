@@ -399,7 +399,12 @@ group_trna <- function(group_opts,
   plot_args <- get_plot_args(df, opts)
   process_args <- get_process_args(opts)
   
-  plots <- list()
+  plots <- data.frame(
+    fname = c(),
+    type = c(),
+    group = c(),
+    object = c()
+  )
   
   if (!is.null(group_opts)) {
     i <- is.na(df$amino_acid)
@@ -421,10 +426,19 @@ group_trna <- function(group_opts,
                        groups$coverage_summary[[group]],
                        process_args)
 
-    group_plots <- list(
-      "df" = l$df,
-      "coverage_summary" = l$coverage_summary
+    plots <- dplyr::bind_rows(
+      plots,
+      tibble::tribble(
+        ~name,                ~type, ~group, ~object,
+          "df",               "tsv", group,  l$df,
+          "coverage_summary", "tsv", group,  l$df
+      )
     )
+    # TODO remove
+    #group_plots <- list(
+    #  "df" = l$df,
+    #  "coverage_summary" = l$coverage_summary
+    #)
         
     sep <- ifelse(group == "_", "", "-")
     fname_group <- ifelse(group == "_", "", group)
@@ -437,11 +451,21 @@ group_trna <- function(group_opts,
                             title = plot_args$title,
                             show_ref = plot_args$show_ref,
                             show_mods = plot_args$show_mods)
-    custom_ggsave(file.path(output_dir, paste0(fname_group, sep, "heatmap.pdf")),
+    output_fname <- file.path(output_dir, paste0(fname_group, sep, "heatmap.pdf"))
+    custom_ggsave(output_fname,
                   heatmap,
                   ggsave_opts = infer_ggsave_opts(df, ggsave_opts = opts$options$ggsave_opts),
                   opts$options$no_crop)
-    group_plots[["heatmap"]] <- heatmap
+    plots <- dplyr::bind_rows(
+      plots,
+      tibble::tribble(
+        ~name,                            ~type, ~group, ~object,
+        output_fname,                     "pdf", group,  heatmap,
+        gsub("pdf$", "rds", output_fname), "rds", group,  heatmap
+      )
+    )
+    # TODO remove
+    # group_plots[["heatmap"]] <- heatmap
 
     # add coverage summary
     if (!is.null(l$coverage_summary)) {
@@ -458,13 +482,23 @@ group_trna <- function(group_opts,
       ggsave_opts <- infer_ggsave_opts(l$df, l$coverage_summary,
                                        ggsave_opts = opts$options$ggsave_opts)
       ggsave_opts$width <- ggsave_opts$width + 3
-      
-      custom_ggsave(file.path(output_dir, paste0(fname_group, sep, "heatmap_cov.pdf")),
+
+      output_fname <- file.path(output_dir, paste0(fname_group, sep, "heatmap_cov.pdf"))
+      custom_ggsave(output_fname,
                     p,
                     ggsave_opts = ggsave_opts,
                     opts$options$no_crop)
-      group_plots[["heatmap_cov"]] <- p
-      group_plots[["coverage_summary"]] <- l$coverage_summary
+      plots <- dplyr::bind_rows(
+        plots,
+        tibble::tribble(
+          ~name,                            ~type, ~group, ~object,
+          output_fname,                     "pdf", group,  p,
+          gsub("pdf$", "rds", output_fname), "rds", group, p
+        )
+      )
+      # TODO remove
+      # group_plots[["heatmap_cov"]] <- p
+      # group_plots[["coverage_summary"]] <- l$coverage_summary
     }
 
     # quick fix
@@ -492,14 +526,25 @@ group_trna <- function(group_opts,
       ggsave_opts <- infer_ggsave_opts(l$df, l$coverage_summary, mod_abbrevs,
                                       ggsave_opts = opts$options$ggsave_opts)
       ggsave_opts$width <- ggsave_opts$width + 3
-      
-      custom_ggsave(file.path(output_dir, paste0(fname_group, sep, "heatmap_mods.pdf")),
+
+      output_fname <- file.path(output_dir, paste0(fname_group, sep, "heatmap_mods.pdf"))
+      custom_ggsave(output_fname,
                     p,
                     ggsave_opts = ggsave_opts,
                     opts$options$no_crop)
-      group_plots[["heatmap_mods"]] <- p
+      plots <- dplyr::bind_rows(
+        plots,
+        tibble::tribble(
+          ~name,                            ~type, ~group, ~object,
+          output_fname,                     "pdf", group,  p,
+          gsub("pdf$", "rds", output_fname), "rds", group, p
+        )
+      )
+      # TODO remove
+      #  group_plots[["heatmap_mods"]] <- p
     }
-    plots[[group]] <- group_plots
+    #TODO remove
+    # plots[[group]] <- group_plots
   }
 
   return(plots)

@@ -193,6 +193,7 @@ if (exists("PLOT_ARGS")) {
 }
 
 BASE_SIZE <- opts$options$base_size
+PLOTS = data.frame() # TODO
 
 ################################################################################
 # check command line
@@ -426,6 +427,17 @@ plots <- group_trna(opts$options$group,
                     opts$options$output_dir,
                     opts)
 
+r <- dplyr::select(plots, name, type, group)
+write.table(r, file.path(opts$options$output_dir, "files.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
+
+check_correct <- function(fname) {
+  return(file.exists(fname) & file.size(fname) > 0)
+}
+fnames <- plots |>
+  dplyr::filter(type %in% c("pdf", "rds")) |>
+  pull(name)
+status <- sapply(fnames, check_correct)
+stopifnot(all(status))
 
 # print additional debug info
 if (opts$options$debug) {

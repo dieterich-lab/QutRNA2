@@ -18,8 +18,9 @@ class Filter(ABC):
   # container for chain of BAM output files.
   OUTPUT = []
 
-  def __init__(self, filter_name, use_temp=True):
+  def __init__(self, filter_name, filter_desc, use_temp=True):
     self.filter_name = filter_name
+    self.filter_desc = filter_desc
     self.use_temp = use_temp
     # add more dependencies if necessary
     self.input = {}
@@ -79,7 +80,10 @@ class Filter(ABC):
 
 class FilterRandomAlignment(Filter):
   def __init__(self):
-    super().__init__("random_alignment", use_temp=False)
+    super().__init__(
+      "random_alignment",
+      """Filter alignment score by random alignment""",
+      use_temp=False)
 
   def _process(self):
     self.input["cutoff"] = "results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}_stats/cutoff.txt"
@@ -91,7 +95,9 @@ class FilterRandomAlignment(Filter):
 
 class FilterIgnoreTrnas(Filter):
   def __init__(self):
-    super().__init__("ignore_trnas")
+    super().__init__(
+      "ignore_trnas",
+    """Remove tRNA by regular expression""")
 
   def _process(self):
     self.input["trnas_selected"] = TRNAS_SELECTED
@@ -102,7 +108,9 @@ class FilterIgnoreTrnas(Filter):
 
 class FilterSamtools(Filter):
   def __init__(self):
-    super().__init__("samtools")
+    super().__init__(
+      "samtools",
+    """Filter reads with samtools `view` and/or use `calmd` to fix MD field.""")
 
   def _process(self):
     input_ = "{input.bam:q}"
@@ -126,7 +134,9 @@ class FilterSamtools(Filter):
 
 class FilterTrimCigar(Filter):
   def __init__(self):
-    super().__init__("trim_cigar")
+    super().__init__(
+      "trim_cigar",
+    """Fix CIGAR string after parasail""")
 
   def _process(self):
     self.output["stats"] = f"results/bam/filtered-{self.filter_name}/sample~{{SAMPLE}}/subsample~{{SUBSAMPLE}}/{{BC}}_filter.txt"
@@ -139,7 +149,9 @@ class FilterTrimCigar(Filter):
 
 class FilterReadLength(Filter):
   def __init__(self):
-    super().__init__("read_length")
+    super().__init__(
+      "read_length",
+    """Filter reads by length""")
 
   def _process(self):
     opts = []
@@ -159,7 +171,9 @@ class FilterReadLength(Filter):
 
 class FilterAlignmentLength(Filter):
   def __init__(self):
-    super().__init__("alignment_length")
+    super().__init__(
+      "alignment_length",
+    """Filter reads by alignment length""")
 
   def _process(self):
     opts = []
@@ -179,7 +193,9 @@ class FilterAlignmentLength(Filter):
 
 class FilterMultimapper(Filter):
   def __init__(self):
-    super().__init__("multimapper")
+    super().__init__(
+      "multimapper",
+    """Remove multimapping reads""")
 
   def _process(self):
     if not self.config:
@@ -195,7 +211,10 @@ class FilterMultimapper(Filter):
 
 class FilterAdapterOverlap(Filter):
   def __init__(self):
-    super().__init__("adapter_overlap")
+    super().__init__(
+      "adapter_overlap",
+      """Filter by adapter overlap"""
+    )
 
   def _process(self):
     self.input["ref_fasta"] = REF_FASTA

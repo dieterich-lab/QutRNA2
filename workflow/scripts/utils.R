@@ -82,7 +82,7 @@ custom_ggsave <- function(filename, plot, ggsave_opts = NULL, no_crop = TRUE) {
   if (!no_crop) {
     knitr::plot_crop(filename, quiet = FALSE)
   }
-
+  saveRDS(plot, gsub(".pdf$", ".rds", filename))
 }
 
 ################################################################################

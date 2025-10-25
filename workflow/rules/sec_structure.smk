@@ -18,20 +18,28 @@ create_include("sprinzl_labels",
   config["include"].get("sprinzl_labels","copy"))
 
 # in case of sprinzl, handle if model or precalculated mapping is to be used
-if pep.config["qutrna2"]["coords"] == "sprinzl" and "cm" in pep.config["qutrna2"]["sprinzl"]:
+if pep.config["qutrna2"]["coords"] == "sprinzl":
 
-  # How mapping to sprinzl coordinates are calculate, by alignment or from existing mapping
+  # How mapping to sprinzl coordinates are calculated, by alignment or from existing mapping
   # cm -> covarince model -> calculate secondary structure alignment and create mapping
   # seq_to_sprinzl -> use exisiting mapping
   if "cm" in pep.config["qutrna2"]["sprinzl"]:
     SPRINZL_MODE = "cm"
     # covariance model destination
     CM = "data/cm.stk"
+    AFASTA = "results/ss/ref.afasta"
     create_include("cm",
       pep.config["qutrna2"]["sprinzl"]["cm"],
       CM,
       config["include"]["cm"])
     SEQ_TO_SPRINZL_INIT = "results/ss/seq_to_sprinzl.tsv"
+  elif "afasta" in pep.config["qutrna2"]["sprinzl"]:
+    SPRINZL_MODE = "afasta"
+    AFASTA = "data/ref.afasta"
+    create_include("afasta",
+      pep.config["qutrna2"]["sprinzl"]["afasta"],
+      AFASTA,
+      config["include"].get("afasta", "copy"))
   elif "seq_to_sprinzl" in pep.config["qutrna2"]["sprinzl"]:
     SPRINZL_MODE = "seq2sprinzl"
     SEQ_TO_SPRINZL_INIT = "data/seq_to_sprinzl.tsv"
@@ -59,37 +67,66 @@ if pep.config["qutrna2"]["coords"] == "sprinzl" and "cm" in pep.config["qutrna2"
         2> {log}
    """
 
-
-  rule ss_annotate_consensus:
+  rule ss_stk_to_afasta:
     input: stk="results/cmalign/align.stk",
-           sprinzl=SPRINZL_LABELS
-    output: "results/ss/consensus_annotated.tsv"
+    output: AFASTA
     conda: "qutrna2"
-    log: "logs/ss/annotate_consensus.log"
+    log: "logs/ss/stk_to_afasta.log"
     shell: """
-      python {workflow.basedir}/scripts/sprinzl_utils.py annotate-consensus \
+      python {workflow.basedir}/scripts/sprinzl_utils.py stk-to-afasta \
         --output {output:q} \
-        --sprinzl {input.sprinzl:q} \
         {input.stk:q} \
         2> {log:q}
     """
 
+  # TODO remove
+  #rule ss_annotate_consensus:
+  #  input: stk="results/cmalign/align.stk",
+  #         sprinzl=SPRINZL_LABELS
+  #  output: "results/ss/consensus_annotated.tsv"
+  #  conda: "qutrna2"
+  #  log: "logs/ss/annotate_consensus.log"
+  #  shell: """
+  #    python {workflow.basedir}/scripts/sprinzl_utils.py annotate-consensus \
+  #      --output {output:q} \
+  #      --sprinzl {input.sprinzl:q} \
+  #      {input.stk:q} \
+  #      2> {log:q}
+  #  """
 
-  rule ss_map_seq_to_sprinzl:
-    input: align="results/cmalign/align.stk",
-           consensus_annotated="results/ss/consensus_annotated.tsv"
+  rule ss_afasta_to_sprinzl:
+    input: afasta=AFASTA,
+           sprinzl=SPRINZL_LABELS
     output: SEQ_TO_SPRINZL_INIT
     conda: "qutrna2"
-    log: "logs/ss/map_seq_to_sprinzl.log"
+    log: "logs/ss/afasta_to_sprinzl.log"
     params: map_introns=lambda wildcards: "--map-introns" if pep.config["qutrna2"]["sprinzl"].get("map_introns", False) else ""
     shell: """
-      python {workflow.basedir}/scripts/sprinzl_utils.py map-seq-sprinzl \
+      python {workflow.basedir}/scripts/sprinzl_utils.py afasta-to-sprinzl \
         {params.map_introns} \
         --output {output:q} \
-        --cons-ss-annotation {input.consensus_annotated:q} \
-        {input.align:q} \
+        --sprinzl {input.sprinzl:q} \
+        {input.afasta:q} \
         2> {log:q}
     """
+
+
+  # TODO remove
+  #rule ss_map_seq_to_sprinzl:
+  #  input: align="results/cmalign/align.stk",
+  #         consensus_annotated="results/ss/consensus_annotated.tsv"
+  #  output: SEQ_TO_SPRINZL_INIT
+  #  conda: "qutrna2"
+  #  log: "logs/ss/map_seq_to_sprinzl.log"
+  #  params: map_introns=lambda wildcards: "--map-introns" if pep.config["qutrna2"]["sprinzl"].get("map_introns", False) else ""
+  #  shell: """
+  #    python {workflow.basedir}/scripts/sprinzl_utils.py map-seq-sprinzl \
+  #      {params.map_introns} \
+  #      --output {output:q} \
+  #      --cons-ss-annotation {input.consensus_annotated:q} \
+  #      {input.align:q} \
+  #      2> {log:q}
+  #  """
 else:
   SEQ_TO_SPRINZL_INIT = "data/seq_to_sprinzl.tsv"
 

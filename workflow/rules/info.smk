@@ -41,6 +41,7 @@ if workflow.pepfile:
       shutil.copyfile(src, dst)
 
 
+# FIXME <-> report and this
 rule create_info_version:
   output:
     "info/version.txt"

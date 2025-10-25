@@ -1,5 +1,7 @@
 from snakemake import shell
 import itertools
+import pandas as pd
+
 
 wildcard_constraints:
   COND1="[^/~]+",
@@ -18,6 +20,11 @@ DEFAULT_SCORE = "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_sc
 
 ########################################################################################################################
 
+def flatten_dict(d):
+  return list(pd.json_normalize(d, sep="_").to_dict(orient="records")[0].values())
+
+########################################################################################################################
+
 # Helper function to create include rules that will copy or link files into workspace
 def create_include(name_, input_, output_, params_):
   rule:
@@ -32,8 +39,6 @@ def create_include(name_, input_, output_, params_):
         cmd = "ln -s"
 
       shell(cmd + " {input:q} {output:q}")
-
-
 
 ########################################################################################################################
 # Include and optionally transform reference

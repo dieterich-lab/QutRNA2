@@ -10,112 +10,114 @@ def cli():
     pass
 
 
-@cli.command()
-@click.option("-o", "--output", required=True, type=click.Path())
-@click.option("-s", "--sprinzl", required=True, type=click.Path(exists=True))
-@click.argument("STK", type=click.Path(exists=True))
-def annotate_consensus(stk, sprinzl, output):
-    """Label consensus secondary structure alignment"""
+# TODO remove
+#@cli.command()
+#@click.option("-o", "--output", required=True, type=click.Path())
+#@click.option("-s", "--sprinzl", required=True, type=click.Path(exists=True))
+#@click.argument("STK", type=click.Path(exists=True))
+#def annotate_consensus(stk, sprinzl, output):
+#    """Label consensus secondary structure alignment"""
+#
+#    # load ss consensus annotation
+#    sprinzl_df = pd.read_csv(sprinzl, header=None)[0].to_list()
+#
+#    # load alignments
+#    align = AlignIO.read(stk, "stockholm")
+#    mapping = {}
+#    sprinzl_i = 0
+#    # pick ss consensus
+#    ss_cons = align.column_annotations["secondary_structure"]
+#    # assign sprinzl coordinates to ss consensus
+#    for ss_i, ss in enumerate(ss_cons, start=1):
+#        if not mapping:
+#            if ss == ":":
+#                mapping[ss_i] = sprinzl_df[sprinzl_i]
+#                sprinzl_i += 1
+#            elif ss == "(":
+#                sprinzl_i += 1
+#                mapping[ss_i] = sprinzl_df[sprinzl_i]
+#                sprinzl_i += 1
+#            else:
+#                mapping[ss_i] = "-"
+#        else:
+#            if ss == ".":
+#                mapping[ss_i] = "-"
+#            elif ss == "~":
+#                mapping[ss_i] = "~"
+#            else:
+#                try:
+#                    sprinzl = sprinzl_df[sprinzl_i]
+#                except IndexError:
+#                    sprinzl = "-"
+#                mapping[ss_i] = sprinzl
+#                sprinzl_i += 1
+#
+#    df = pd.DataFrame(mapping.items(), columns=["cons", "sprinzl"])
+#    df["ss"] = list(ss_cons)
+#    df.to_csv(output, sep="\t", index=False)
 
-    # load ss consensus annotation
-    sprinzl_df = pd.read_csv(sprinzl, header=None)[0].to_list()
 
-    # load alignments
-    align = AlignIO.read(stk, "stockholm")
-    mapping = {}
-    sprinzl_i = 0
-    # pick ss consensus
-    ss_cons = align.column_annotations["secondary_structure"]
-    # assign sprinzl coordinates to ss consensus
-    for ss_i, ss in enumerate(ss_cons, start=1):
-        if not mapping:
-            if ss == ":":
-                mapping[ss_i] = sprinzl_df[sprinzl_i]
-                sprinzl_i += 1
-            elif ss == "(":
-                sprinzl_i += 1
-                mapping[ss_i] = sprinzl_df[sprinzl_i]
-                sprinzl_i += 1
-            else:
-                mapping[ss_i] = "-"
-        else:
-            if ss == ".":
-                mapping[ss_i] = "-"
-            elif ss == "~":
-                mapping[ss_i] = "~"
-            else:
-                try:
-                    sprinzl = sprinzl_df[sprinzl_i]
-                except IndexError:
-                    sprinzl = "-"
-                mapping[ss_i] = sprinzl
-                sprinzl_i += 1
-
-    df = pd.DataFrame(mapping.items(), columns=["cons", "sprinzl"])
-    df["ss"] = list(ss_cons)
-    df.to_csv(output, sep="\t", index=False)
-
-
-@cli.command()
-@click.option("--output", required=True, type=click.Path())
-@click.option("--map-introns", is_flag=True)
-@click.option("--cons-ss-annotation", required=True, type=click.Path(exists=True))
-@click.argument("STK", type=click.Path(exists=True))
-def map_seq_sprinzl(stk, map_introns, cons_ss_annotation, output):
-    """Map sequence to sprinzl coorindates"""
-
-    # read cmalign
-    align = AlignIO.read(stk, "stockholm")
-    # read conserved secondary structure with annotation (sprinzl)
-    cons_ss_annotation = pd.read_csv(cons_ss_annotation, sep="\t").set_index("cons")
-
-    dfs = []
-    for record in align:
-        la_sprinzl = []
-        la_seq_pos = []
-        seq_pos = 0
-
-        intron_i = 1
-        last_sprinzl = ""
-        for i, letter in enumerate(record.seq, start=1):
-            if letter in ["A", "C", "G", "U", "T", "a", "c", "g", "u", "t"]:
-                seq_pos += 1
-                la_seq_pos.append(seq_pos)
-            else:
-                la_seq_pos.append("-")
-
-            if i > max(cons_ss_annotation.index):
-                sprinzl_pos = "-"
-            else:
-                sprinzl_pos = str(cons_ss_annotation.loc[i, "sprinzl"])
-
-            if not sprinzl_pos in ["-", "~"]:
-                last_sprinzl = sprinzl_pos
-
-            if letter in ["A", "C", "G", "U", "T"]:
-                la_sprinzl.append(sprinzl_pos)
-            elif letter in ["a", "c", "g", "u", "t"]:
-                if map_introns:
-                  if last_sprinzl == str(37):
-                      la_sprinzl.append("i" + str(intron_i))
-                      intron_i += 1
-                  else:
-                      la_sprinzl.append(sprinzl_pos)
-                else:
-                  la_sprinzl.append("-")
-            else:
-                la_sprinzl.append("-")
-        df = pd.DataFrame(
-            {"id": record.id,
-             "seq": list(str(record.seq)),
-             "ss": list(align.column_annotations["secondary_structure"]),
-             "seq_pos": la_seq_pos,
-             "aln_pos": range(1, len(record.seq) + 1),
-             "sprinzl": la_sprinzl})
-        dfs.append(df)
-
-    df = pd.concat(dfs)
-    df.to_csv(output, sep="\t", index=False, quoting=False)
+# TODO
+#@cli.command()
+#@click.option("--output", required=True, type=click.Path())
+#@click.option("--map-introns", is_flag=True)
+#@click.option("--cons-ss-annotation", required=True, type=click.Path(exists=True))
+#@click.argument("STK", type=click.Path(exists=True))
+#def map_seq_sprinzl(stk, map_introns, cons_ss_annotation, output):
+#    """Map sequence to sprinzl coorindates"""
+#
+#    # read cmalign
+#    align = AlignIO.read(stk, "stockholm")
+#    # read conserved secondary structure with annotation (sprinzl)
+#    cons_ss_annotation = pd.read_csv(cons_ss_annotation, sep="\t").set_index("cons")
+#
+#    dfs = []
+#    for record in align:
+#        la_sprinzl = []
+#        la_seq_pos = []
+#        seq_pos = 0
+#
+#        intron_i = 1
+#        last_sprinzl = ""
+#        for i, letter in enumerate(record.seq, start=1):
+#            if letter in ["A", "C", "G", "U", "T", "a", "c", "g", "u", "t"]:
+#                seq_pos += 1
+#                la_seq_pos.append(seq_pos)
+#            else:
+#                la_seq_pos.append("-")
+#
+#            if i > max(cons_ss_annotation.index):
+#                sprinzl_pos = "-"
+#            else:
+#                sprinzl_pos = str(cons_ss_annotation.loc[i, "sprinzl"])
+#
+#            if not sprinzl_pos in ["-", "~"]:
+#                last_sprinzl = sprinzl_pos
+#
+#            if letter in ["A", "C", "G", "U", "T"]:
+#                la_sprinzl.append(sprinzl_pos)
+#            elif letter in ["a", "c", "g", "u", "t"]:
+#                if map_introns:
+#                  if last_sprinzl == str(37):
+#                      la_sprinzl.append("i" + str(intron_i))
+#                      intron_i += 1
+#                  else:
+#                      la_sprinzl.append(sprinzl_pos)
+#                else:
+#                  la_sprinzl.append("-")
+#            else:
+#                la_sprinzl.append("-")
+#        df = pd.DataFrame(
+#            {"id": record.id,
+#             "seq": list(str(record.seq)),
+#             "ss": list(align.column_annotations["secondary_structure"]),
+#             "seq_pos": la_seq_pos,
+#             "aln_pos": range(1, len(record.seq) + 1),
+#             "sprinzl": la_sprinzl})
+#        dfs.append(df)
+#
+#    df = pd.concat(dfs)
+#    df.to_csv(output, sep="\t", index=False, quoting=False)
 
 
 def write_fasta_records(records, fname):
@@ -143,6 +145,87 @@ def convert(stk, fasta, vienna):
 
   write_fasta_records(fasta_container, fasta)
   write_fasta_records(vienna_container, vienna)
+
+
+@cli.command()
+@click.option("--output", required=True, help="Output for aligned FASTA")
+@click.argument("stk", type=click.Path(exists=True))
+def stk_to_afasta(stk, output):
+  align = AlignIO.read(stk, "stockholm")
+  ss = str(align.column_annotations["secondary_structure"])
+  #ss = ss.replace(",", ".").replace("_", ".").replace(":", "")
+
+  fasta_container = []
+  for record in align:
+    new_seq = []
+    for b, s in zip(str(record.seq), ss):
+      if s == ".":
+        if b != "-":
+          new_seq.append(b.lower())
+        else:
+          new_seq.append("-")
+      elif b == "-":
+        new_seq.append(".")
+      else:
+        new_seq.append(b.upper())
+    fasta_container.append(
+      SeqRecord(Seq("".join(new_seq)), record.id, description=""))
+
+  write_fasta_records(fasta_container, output)
+
+
+@cli.command()
+@click.option("--sprinzl", required=True, type=click.Path(exists=True))
+@click.option("--output", required=True, help="Output FNAME")
+@click.option("--map-introns", is_flag=True)
+@click.argument("afasta", type=click.Path(exists=True))
+def afasta_to_sprinzl(afasta, sprinzl, map_introns, output):
+  sprinzl = pd.read_csv(sprinzl, header=None)[0].to_list()
+  assert sprinzl[0] == "-"
+
+  dfs = []
+  with open(afasta) as handle:
+    for record in SeqIO.parse(handle, "fasta"):
+      la_sprinzl = []
+      la_seq_pos = []
+      la_letter = []
+      sprinzl_i = 0
+      seq_pos = 0
+
+      intron_i = 1
+      last_sprinzl = ""
+      for _, letter in enumerate(record.seq, start=1):
+        if letter in ["A", "C", "G", "U", "T"]:
+          seq_pos += 1
+          la_seq_pos.append(seq_pos)
+          sprinzl_i += 1
+          la_sprinzl.append(sprinzl[sprinzl_i])
+          la_letter.append(letter)
+        elif letter in ["a", "c", "g", "u", "t"]:
+          seq_pos += 1
+          la_seq_pos.append(seq_pos)
+          la_letter.append(letter)
+          if map_introns and sprinzl[sprinzl_i] == str(37):
+            la_sprinzl.append(f"i{intron_i}")
+            intron_i += 1
+          else:
+            la_sprinzl.append("-")
+        elif letter == ".":
+          sprinzl_i += 1
+          seq_pos += 1
+        elif letter == "-":
+          pass
+        else:
+          raise Exception("Format error!")
+
+      df = pd.DataFrame(
+        {"id": record.id,
+        "seq_letter": la_letter,
+        "seq_pos": la_seq_pos,
+        "sprinzl": la_sprinzl})
+      dfs.append(df)
+
+  pd.concat(dfs).to_csv(output, sep="\t", index=False, quoting=False)
 
 
 @cli.command()

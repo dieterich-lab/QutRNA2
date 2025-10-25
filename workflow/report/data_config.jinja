@@ -1,0 +1,50 @@
+## Data / Config {.tabset}
+
+Working directory: {{ workdir }}
+
+Base directory: {{ basedir }}
+
+### Configfiles
+
+{%- for e in configfiles %}
+* {{ e }}
+{% endfor %}
+
+<pre>{{ config_str }}</pre>
+
+### PEP file
+
+PEP file: {{ pepfile }}
+
+<pre>{{ pep_str }}</pre>
+
+
+### Sample table
+
+<table>
+<thead>
+<tr>
+  {%- for column in sample_table.header %}
+  <th>{{ column }}</th>
+  {%- endfor %}
+ </tr>
+</thead>
+<tbody>
+{%- for row in sample_table.rows %}
+  <tr>
+    {%- for cell in row %}
+      {%- if not loop.first %}
+      <td>{{ cell }}</td>
+      {%- endif %}
+    {%- endfor %}
+  </tr>
+{%- endfor %}
+</tbody>
+</table>
+
+### Software
+
+* QutRNA2 {{ versions["qutrna2"] }}
+* gpu-tRNA-mapper {{ versions["gpu-tRNA-mapper"] }}
+* JACUSA2 {{ versions["jacusa2"] }}
+* infernal {{ versions["infernal"] }}

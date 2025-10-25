@@ -1,0 +1,91 @@
+## Preprocessing {.tabset}
+
+{% if filters_applied %}
+### Filter
+
+#### Applied filter:
+
+{% for item in filters_applied %}
+    {{ loop.index }}. {{ item }}
+{% endfor %}
+{% endif %}
+
+{% if "threshold_summary" in rds %}
+### Alignment score
+
+#### Overview
+
+```{r, fig-threshold-summary-default, fig.align = "center", out.width = "100%"}
+p <- readRDS("../../{{ rds["threshold_summary"]["default"] }}")
+p <- p & theme(text=element_text(size=10))
+print(p)
+```
+
+{% if rds["threshold_summary"]["custom"] %}
+{% for plot_id, rds_fname in rds["threshold_summary"]["custom"].items() %}
+##### {{ plot_id }}</h5>
+
+```{r, fig-threshold-summary-custom{{ plot_id }}, fig.align = "center", out.width = "100%"}
+p <- readRDS("../../{{ rds_fname }}")
+p <- p & theme(text=element_text(size=10))
+print(p)
+```
+{% endfor %}
+{% endif %}
+{% endif %}
+
+{% if "read_length" in rds %}
+### Read length
+
+#### Overview {.tabset}
+
+{% for type in ["condition", "sample", "subsample"] %}
+##### {{ type | capitalize }}
+
+```{r, fig-read-length-{{ type }}, fig = "align", out.width = "100%"}
+p <- readRDS("../../{{ rds["read_length"][type] }}")
+p <- p & theme(text=element_text(size=10))
+print(p)
+```
+{% endfor %}
+
+{% for plot_id, rds_fname in rds["read_length"]["custom"].items() %}
+#### Custom
+
+##### {{ plot_id }}
+
+```{r, fig-read-length-custom{{ plot_id }}, fig.align = "center", out.width = "100%"}
+p <- readRDS("../../{{ rds_fname }}")
+p <- p & theme(text=element_text(size=10))
+print(p)
+```
+{% endfor %}
+{% endif %}
+
+{% if "record_count" in rds %}
+### Read count
+
+#### Overview {.tabset}
+
+{% for type in ["condition", "sample", "subsample"] %}
+##### {{ type | capitalize }}
+
+```{r, fig-record-count-{{ type }}, fig = "align", out.width = "100%"}
+p <- readRDS("../../{{ rds["record_count"][type] }}")
+p <- p & theme(text=element_text(size=10))
+print(p)
+```
+{% endfor %}
+
+{% for plot_id, rds_fname in rds["record_count"]["custom"].items() %}
+#### Custom
+
+##### {{ plot_id }}
+
+```{r, fig-record-count-custom{{ plot_id }}, fig = "align", out.width = "100%"}
+p <- readRDS("../../{{ rds_fname }}")
+p <- p & theme(text=element_text(size=10))
+print(p)
+```
+{% endfor %}
+{% endif %}

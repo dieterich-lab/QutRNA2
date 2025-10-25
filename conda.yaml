@@ -17,12 +17,15 @@ dependencies:
   - r-ggplot2
   - r-dplyr
   - r-knitr
+  - r-rmarkdown
   - r-stringr
   - r-optparse
   - r-patchwork
   - r-tinytex
   - r-yardstick
   - infernal
+  - jinja2
+  - yaml
   - click
   - pysam
   - biopython
