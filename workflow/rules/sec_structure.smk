@@ -51,7 +51,6 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
           2> {log}
      """
 
-
     rule ss_stk_to_afasta:
       input: stk="results/cmalign/align.stk",
       output: AFASTA
@@ -63,7 +62,6 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
           {input.stk:q} \
           2> {log:q}
       """
-
   elif "afasta" in pep.config["qutrna2"]["sprinzl"]:
     SPRINZL_MODE = "afasta"
     AFASTA = "data/ref.afasta"
@@ -82,35 +80,21 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   else:
     raise Exception("Must provide either 'cm' or 'seq_to_sprinzl' in pep!")
 
+  if "cm" in pep.config["qutrna2"]["sprinzl"] or "afasta" in pep.config["qutrna2"]["sprinzl"]:
 
-  # TODO remove
-  #rule ss_annotate_consensus:
-  #  input: stk="results/cmalign/align.stk",
-  #         sprinzl=SPRINZL_LABELS
-  #  output: "results/ss/consensus_annotated.tsv"
-  #  conda: "qutrna2"
-  #  log: "logs/ss/annotate_consensus.log"
-  #  shell: """
-  #    python {workflow.basedir}/scripts/sprinzl_utils.py annotate-consensus \
-  #      --output {output:q} \
-  #      --sprinzl {input.sprinzl:q} \
-  #      {input.stk:q} \
-  #      2> {log:q}
-  #  """
-
-  rule ss_afasta_to_sprinzl:
-    input: afasta=AFASTA,
-           sprinzl=SPRINZL_LABELS
-    output: SEQ_TO_SPRINZL_INIT
-    conda: "qutrna2"
-    log: "logs/ss/afasta_to_sprinzl.log"
-    shell: """
-      python {workflow.basedir}/scripts/sprinzl_utils.py afasta-to-sprinzl \
-        --output {output:q} \
-        --sprinzl {input.sprinzl:q} \
-        {input.afasta:q} \
-        2> {log:q}
-    """
+    rule ss_afasta_to_sprinzl:
+      input: afasta=AFASTA,
+        sprinzl=SPRINZL_LABELS
+      output: SEQ_TO_SPRINZL_INIT
+      conda: "qutrna2"
+      log: "logs/ss/afasta_to_sprinzl.log"
+      shell: """
+        python {workflow.basedir}/scripts/sprinzl_utils.py afasta-to-sprinzl \
+          --output {output:q} \
+          --sprinzl {input.sprinzl:q} \
+          {input.afasta:q} \
+          2> {log:q}
+      """
 
 
 else:
