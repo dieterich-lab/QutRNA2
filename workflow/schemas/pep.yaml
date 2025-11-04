@@ -49,6 +49,8 @@ properties:
                 type: string
               seq_to_sprinzl:
                 type: string
+              afasta:
+                type: string
               map_introns:
                 type: boolean
                 default: false
