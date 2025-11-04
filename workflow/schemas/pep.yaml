@@ -51,9 +51,6 @@ properties:
                 type: string
               afasta:
                 type: string
-              map_introns:
-                type: boolean
-                default: false
               ignore_trnas:
                 type: string
             default: {}

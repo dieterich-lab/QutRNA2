@@ -4,14 +4,13 @@ sample_table: sample_table.tsv # (required) path to sample description - use abs
 # QutRNA2 specific keys
 qutrna2:
 
- coords: sprinzl # (required) [sprinzl|seq] which coordinates to use to display in heatmap
-  sprinzl:
+  coords: # (required) [sprinzl|seq] which coordinates to use to display in heatmap
     labels: # (required) path to Sprinzl labels
     # cm or seq_to_sprinzl is required
     cm: # path to covariance model/beegfs/homes/mpiechotta/git/QutRNA/data/TRNAinf-euk.cm
     #
+    afasta: # path to aligned FASTA
     seq_to_sprinzl: # path to TSV with sequence to sprinzl mappings
-    map_introns: False # (defaul) [True|False] assign intron coordinates, e.g. i1,i2,...
     ignore_trnas: ^MT # (optional) regular expression to exclude tRNAs from secondary structure alignment. If set and in config.yaml filter/ignore_trnas/apply=True, those tRNAs will be removed from BAM files
 
   ref_fasta:
