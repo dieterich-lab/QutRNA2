@@ -420,6 +420,7 @@ group_trna <- function(group_opts,
   l <- add_groups(group_opts, df, coverage_summary)
   groups <- split_groups(l$df,
                          l$coverage_summary)
+  # TODO catch NA
 
   for (group in names(groups$df)) {
     l <- process_group(groups$df[[group]],

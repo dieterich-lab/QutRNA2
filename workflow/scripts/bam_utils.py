@@ -8,12 +8,17 @@ import sys
 import gzip
 from contextlib import nullcontext
 from collections import Counter, defaultdict
-from Bio import SeqIO
 
 
 @click.group()
 def cli():
     pass
+
+
+class FastaRecord:
+  def __init__(self, id, seq):
+    self.id = id
+    self.seq = seq
 
 
 class BaseChange(enum.Enum):
@@ -319,7 +324,8 @@ def adapter_overlap(bam,
     """Filter by read-adapter overlap"""
 
     # trna 2 fasta
-    trnas = {trna.name: trna for trna in SeqIO.parse(fasta, "fasta")}
+    faidx = pysam.FastaFile(fasta)
+    trnas = {ref: FastaRecord(ref, faidx[ref]) for ref in faidx.references}
 
     # io
     in_samfile = pysam.AlignmentFile(pysam_stdin(bam), "rb")

@@ -33,6 +33,7 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
       CM,
       config["include"]["cm"])
     SEQ_TO_SPRINZL_INIT = "results/ss/seq_to_sprinzl.tsv"
+    CONSENSUS_LABELS = "results/data/consensus_labels.tsv"
 
     rule cmalign_run:
       input: cm=CM,
@@ -62,6 +63,19 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
           {input.stk:q} \
           2> {log:q}
       """
+
+    rule ss_create_consensus_label:
+      input: stk="results/cmalign/align.stk",
+             labels=SPRINZL_LABELS,
+      output: CONSENSUS_LABELS,
+      log: "logs/ss/create_consus_labels.log"
+      shell: """
+        python {workflow.basedir}/scripts/sprinzl_utils.py consensus-labels \
+        --labels={input.labels:q} \
+        --output {output:q} \
+        {input.stk:q} \
+        2> {log:q}
+      """
   elif "afasta" in pep.config["qutrna2"]["sprinzl"]:
     SPRINZL_MODE = "afasta"
     AFASTA = "data/ref.afasta"
@@ -70,6 +84,11 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
       AFASTA,
       config["include"].get("afasta", "copy"))
     SEQ_TO_SPRINZL_INIT = "results/ss/seq_to_sprinzl.tsv"
+    CONSENSUS_LABELS = "results/data/consensus_labels.tsv"
+    create_include("consensus_labels",
+      pep.config["qutrna2"]["sprinzl"]["consensus_labels"],
+      CONSENSUS_LABELS,
+      config["include"]["consensus_labels"])
   elif "seq_to_sprinzl" in pep.config["qutrna2"]["sprinzl"]:
     SPRINZL_MODE = "seq2sprinzl"
     SEQ_TO_SPRINZL_INIT = "data/seq_to_sprinzl.tsv"
@@ -83,19 +102,18 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   if "cm" in pep.config["qutrna2"]["sprinzl"] or "afasta" in pep.config["qutrna2"]["sprinzl"]:
 
     rule ss_afasta_to_sprinzl:
-      input: afasta=AFASTA,
-        sprinzl=SPRINZL_LABELS
+      input: stk=AFASTA,
+             labels=CONSENSUS_LABELS
       output: SEQ_TO_SPRINZL_INIT
       conda: "qutrna2"
       log: "logs/ss/afasta_to_sprinzl.log"
       shell: """
         python {workflow.basedir}/scripts/sprinzl_utils.py afasta-to-sprinzl \
           --output {output:q} \
-          --sprinzl {input.sprinzl:q} \
-          {input.afasta:q} \
+          --labels {input.labels:q} \
+          {input.stk:q} \
           2> {log:q}
       """
-
 
 else:
   SEQ_TO_SPRINZL_INIT = "data/seq_to_sprinzl.tsv"

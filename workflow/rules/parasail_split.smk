@@ -51,8 +51,9 @@ rule samtools_sam_to_bam:
   log: "logs/samtools_sam_to_bam/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}_split/part_{part}.log"
   benchmark: "benchmarks/sam_to_bam/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}_split/part_{part}.txt"
   conda: "qutrna2"
+  threads: 1
   shell: """
-    samtools view -b -o {output:q} -F 4 {input:q} 2> {log:q}
+    samtools view -@ {threads} -b -o {output:q} -F 4 {input:q} 2> {log:q}
   """
 
 

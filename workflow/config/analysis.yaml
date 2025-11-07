@@ -56,7 +56,11 @@ plots:
 # TODO adjust
 include: # determines how data is included in the workflow: link or copy. Check schemas/config (include) for default values.
   ref_fasta: # copy or link reference fasta.
-  cm: # copy or link cm file.
+  sprinzl:
+    cm: # copy or link cm file.
+    labels:
+    consensus_labels:
+    seq_to_sprinzl:
   mods:
     file: # copy or link modification file.
     abbrevs: # copy or link abbrevs file.

@@ -142,7 +142,7 @@ class FilterTrimCigar(Filter):
     self.output["stats"] = f"results/bam/filtered-{self.filter_name}/sample~{{SAMPLE}}/subsample~{{SUBSAMPLE}}/{{BC}}_filter.txt"
     self.cmds.append(
       f"python {workflow.basedir}/scripts/bam_utils.py filter --stats {{output.stats:q}} --trim-cigar --output '-' {{input.bam:q}}")
-    self.cmds.append("samtools sort -o {output.bam:q} /dev/stdin")
+    self.cmds.append("samtools sort {threads} -o {output.bam:q} /dev/stdin")
 
     return True
 
@@ -202,9 +202,9 @@ class FilterMultimapper(Filter):
       return False
 
     # sort by read_id, count multimapper, sort by soordinate
-    self.cmds.append("samtools sort -n {input.bam:q}")
+    self.cmds.append("samtools sort -@ {threads} -n {input.bam:q}")
     self.cmds.append(f"python {workflow.basedir}/scripts/bam_utils.py filter-multimapper /dev/stdin")
-    self.cmds.append("samtools sort -o {output.bam:q} /dev/stdin")
+    self.cmds.append("samtools sort -@ {threads} -o {output.bam:q} /dev/stdin")
 
     return True
 

@@ -168,9 +168,10 @@ elif "fastq" in pep.sample_table.columns:
       params: linker5=pep.config["qutrna2"]["linker5"],
               linker3=pep.config["qutrna2"]["linker3"]
       shell: """
-          python {workflow.basedir}/scripts/fasta_utils.py reverse \
-            --linker5 {params.linker5} \
-            --linker3 {params.linker3} \
+          python {workflow.basedir}/scripts/fasta_utils.py transform \
+            -r \
+            --remove-linker5 {params.linker5} \
+            --remove-linker3 {params.linker3} \
             --output {output:q} \
             {input:q} 2> {log:q}
         """

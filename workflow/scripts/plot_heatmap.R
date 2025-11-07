@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+
 
 # Plot JACUSA2 score and existing modification info as a heatmap
 # options(error = function() { traceback(3) ; stop("Error - could not create plots!")})
@@ -193,7 +193,6 @@ if (exists("PLOT_ARGS")) {
 }
 
 BASE_SIZE <- opts$options$base_size
-PLOTS = data.frame() # TODO
 
 ################################################################################
 # check command line
@@ -224,10 +223,10 @@ if (!is.null(opts$options$score_quantile)) {
 
 # check 5' and 3' adapter settings
 if (!is.null(opts$options$five_adapter)) {
-  stopifnot(opts$options$five_adapter > 0)
+  stopifnot(opts$options$five_adapter >= 0)
 }
 if (is.null(opts$options$three_adapter)) {
-  stopifnot(opts$options$three_adapter > 0)
+  stopifnot(opts$options$three_adapter >= 0)
   # ensure that trna_anntotation is provided to determine tRNA length
   stopifnot(!is.null(opts$options$trna_annotation))
 }

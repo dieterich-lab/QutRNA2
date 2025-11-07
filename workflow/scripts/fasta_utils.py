@@ -5,9 +5,15 @@ import re
 import pandas as pd
 from collections import defaultdict
 from os.path import commonprefix
-from mimetypes import guess_type
 from functools import partial
-from Bio import SeqIO
+
+import pysam
+
+
+class Record:
+    def __init__(self, id, seq):
+        self.id = id
+        self.seq = seq
 
 
 class BaseChange(enum.Enum):
@@ -21,10 +27,8 @@ def cli():
 
 
 def read_records(fname):
-    encoding = guess_type(fname)[1]
-    open_in = partial(gzip.open, mode="rt") if encoding == "gzip" else partial(open, mode="r")
-    with open_in(fname) as fin:
-        records = {record.name: record for record in SeqIO.parse(fin, "fasta")}
+    faidx = pysam.Fastafile(fname)
+    records = {ref: Record(ref, faidx[ref]) for ref in faidx.references}
 
     return records
 
@@ -43,8 +47,8 @@ def extract_seqids(fasta, output):
 
     records = read_records(fasta)
     with open_out(output) as fout:
-        for record in records:
-            fout.write(f"{record}\n")
+        for record_id in records:
+            fout.write(f"{record_id}\n")
 
 
 def do_remove_linker(record, linker5, linker3):
@@ -69,23 +73,6 @@ def do_reverse(record):
 
     return record
 
-
-@cli.command()
-@click.option("--linker5", required=True, type=click.IntRange(min=1))
-@click.option("--linker3", required=True, type=click.IntRange(min=1))
-@click.option("-o", "--output", required=True, type=click.Path())
-@click.argument("FASTA", type=click.Path())
-def reverse(fasta, linker5, linker3, output):
-    """Transform fasta"""
-
-    records = read_records(fasta)
-    with open_out(output) as fout:
-        for record in records.values():
-            record.id = f"{record.id}_rev"
-            trna_seq = record.seq[linker5:-linker3]
-            seq = str(record.seq)
-            record.seq = seq[0:linker5] + trna_seq[::-1] + seq[-linker3:]
-            SeqIO.write(record, fout, "fasta")
 
 @cli.command()
 @click.option("-5", "--linker5", type=str)
@@ -140,7 +127,8 @@ def transform(fasta, linker5, linker3, remove_linker5, remove_linker3, base_chan
         for record in records.values():
             for task in tasks:
                 record = task(record)
-            SeqIO.write(record, fout, "fasta")
+            fout.write(f">{record.id}\n")
+            fout.write(f"{record.seq}\n")
 
 
 def ignore_trnas(records, ignore):
@@ -170,7 +158,7 @@ def normalize_trna_ids(trna_ids: list):
 
   common = commonprefix(trna_ids)
   diff = sorted([trna_id.replace(common, "") for trna_id in trna_ids])
-  new_id = ",".join(diff)
+  new_id = ".".join(diff)
 
   return f"{common}{new_id}"
 
@@ -208,11 +196,16 @@ def infer_annotation(fasta, output):
   df["type"][is_mt] = "mt"
   df["type"][~is_mt] = "nuclear"
 
-  info = df["trna"].str.extract(r'.*tRNA-(?P<amino_acid>[^-]+)-(?P<anti_codon>[A-Z]+)')
+  if df["trna"].str.contains("tRNA").any():
+    info = df["trna"].str.extract(r'.*tRNA-(?P<amino_acid>[^-]+)-(?P<anti_codon>[A-Z]+)')
+  else:
+    info = df["trna"].str.extract(r'(?P<amino_acid>[^-]+)-(?P<anti_codon>[A-Z]+)')
+
   df = pd.concat([df, info], axis=1)
   df["seq"] = [str(record.seq).upper().replace("T", "U") for record in trnas.values()]
 
   df.to_csv(output, index=False, sep="\t")
+
 
 if __name__ == "__main__":
     cli()

@@ -27,6 +27,7 @@ def get_read_feature_plots(ftype):
     for type in types:
       plots[feature][type] = f"results/plots/{feature}/{type}.{ftype}"
     # custom read feature specific plots
+
     plots[feature]["custom"] = {}
     for plot in config["plots"].get(feature, []):
       plots[feature]["custom"][plot["id"]] = f"results/plots/{feature}/custom/{plot['id']}.{ftype}"
@@ -38,6 +39,9 @@ def get_read_feature_plots(ftype):
     plots["threshold_summary"]["custom"] = {}
     for plot in config["plots"].get("threshold_summary", []):
       plots["threshold_summary"]["custom"] = f"results/plots/alignment/threshold_summary/custom/{plot['id']}.{ftype}"
+
+  # remove keys with empty values
+  plots = {k: v for k, v in plots.items() if v}
 
   return plots
 

@@ -9,8 +9,9 @@ rule samtools_bam_index:
   output: "{prefix}.sorted.bam.bai"
   conda: "qutrna2"
   log: "logs/samtools/index_bam/{prefix}.log"
+  threads: 1
   shell: """
-    samtools index {input:q} 2> {log:q}
+    samtools index -@ {threads} {input:q} 2> {log:q}
   """
 
 

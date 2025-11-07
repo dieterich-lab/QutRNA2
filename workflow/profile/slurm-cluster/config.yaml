@@ -6,9 +6,13 @@ default-resources:
   slurm_partition: general
   cpus_per_task: 1
 set-threads:
+  filter_multimapper: 2
   parasail_map: 8
   parasail_gpu_assisted: 10
-  jacusa2_run: 20
+  jacusa2_run: 14
+  parasail_gpu_assisted_postprocess: 4
+  samtools_bam_index: 2
+  samtools_merge: 2
 set-resources:
   aggregate_feature:
     mem_mb: 10000
@@ -20,7 +24,6 @@ set-resources:
     mem_mb: 10000
   jacusa2_run:
     mem_mb: 40000
-    cpus_per_task: 10
   samtools_merge:
     mem_mb: 10000
   cm_align:
@@ -39,7 +42,6 @@ set-resources:
     mem_mb: 25000
     slurm_partition: "gpu"
     gres: "gpu:turing:1"
-    cpus_per_task: 10
 show-failed-logs: True
 printshellcmds: True
 use-conda: True

@@ -40,8 +40,9 @@ rule samtools_sam_to_bam:
   log: "logs/samtools_sam_to_bam/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}.log"
   benchmark: "benchmarks/sam_to_bam/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}.txt"
   conda: "qutrna2"
+  threads: 1
   shell: """
-    samtools view -b -o {output:q} -F 4 {input:q} 2> {log:q}
+    samtools view -@ {threads} -b -o {output:q} -F 4 {input:q} 2> {log:q}
   """
 
 
@@ -50,13 +51,14 @@ rule parasail_gpu_assisted_postprocess:
          ref=lambda wildcards: REF_FASTA if wildcards.ALIGNMENT == "real" else REF_FASTA_RANDOM
   output: "results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}.sorted.bam"
   conda: "qutrna2"
+  threads: 1
   benchmark: repeat("benchmarks/parasail/gpu_assisted_postprocess/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}.txt", config.get("_benchmark_repeats", 1))
   log: "logs/parasail/gpu_assisted_postprocess/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~{ALIGNMENT}/{BC}.log"
   shell: """
     (
-      samtools calmd {input.bam:q} {input.ref:q} | \
-      samtools sort -n -O bam /dev/stdin | \
+      samtools calmd -@ {threads} {input.bam:q} {input.ref:q} | \
+      samtools sort -@ {threads} -n -O bam /dev/stdin | \
       python {workflow.basedir}/scripts/bam_utils.py add-hits /dev/stdin | \
-      samtools sort -O bam -o {output:q} /dev/stdin
+      samtools sort -@ {threads} -O bam -o {output:q} /dev/stdin
     ) 2> {log:q}
   """
