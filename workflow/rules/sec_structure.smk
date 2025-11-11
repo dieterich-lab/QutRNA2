@@ -102,7 +102,7 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   if "cm" in pep.config["qutrna2"]["sprinzl"] or "afasta" in pep.config["qutrna2"]["sprinzl"]:
 
     rule ss_afasta_to_sprinzl:
-      input: stk=AFASTA,
+      input: afasta=AFASTA,
              labels=CONSENSUS_LABELS
       output: SEQ_TO_SPRINZL_INIT
       conda: "qutrna2"
@@ -110,8 +110,8 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
       shell: """
         python {workflow.basedir}/scripts/sprinzl_utils.py afasta-to-sprinzl \
           --output {output:q} \
-          --labels {input.labels:q} \
-          {input.stk:q} \
+          --consensus-labels {input.labels:q} \
+          {input.afasta:q} \
           2> {log:q}
       """
 

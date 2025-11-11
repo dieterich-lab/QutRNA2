@@ -157,10 +157,10 @@ def normalize_trna_ids(trna_ids: list):
     return trna_ids[0]
 
   common = commonprefix(trna_ids)
-  diff = sorted([trna_id.replace(common, "") for trna_id in trna_ids])
-  new_id = ".".join(diff)
 
-  return f"{common}{new_id}"
+  # add suffix FIXME
+
+  return common[:-1]
 
 
 def unique_trna_seq(records):

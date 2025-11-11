@@ -2,6 +2,8 @@
 
 Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
+[https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1](https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1)
+
 ## New Features
 
 QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.15](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar) is included that features subsampled scores that improve the signal-to-noise ratio when identifying tRNA modifications.

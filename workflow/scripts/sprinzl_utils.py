@@ -49,11 +49,11 @@ def stk_to_afasta(stk, output):
 
 
 @cli.command()
-@click.option("--labels", required=True, type=click.Path(exists=True))
+@click.option("--consensus-labels", required=True, type=click.Path(exists=True))
 @click.option("--output", required=True, help="Output FNAME")
 @click.argument("afasta", type=click.Path(exists=True))
-def afasta_to_sprinzl(afasta, labels, output):
-  cl = pd.read_csv(labels, sep="\t")
+def afasta_to_sprinzl(afasta, consensus_labels, output):
+  cl = pd.read_csv(consensus_labels, sep="\t")
 
   dfs = []
   faidx = pysam.FastaFile(afasta)
@@ -66,7 +66,7 @@ def afasta_to_sprinzl(afasta, labels, output):
     seq_pos = 0
 
     for aln_pos, (letter, label) in enumerate(zip(seq, cl["label"].to_list())):
-      if letter == "-":
+      if letter in [".", "-"]:
         pass
       else:
         seq_pos += 1
