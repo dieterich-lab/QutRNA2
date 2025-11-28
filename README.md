@@ -6,7 +6,7 @@ Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
 ## New Features
 
-QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.15](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.15-RC/JACUSA_v2.1.15-RC.jar) is included that features subsampled scores that improve the signal-to-noise ratio when identifying tRNA modifications.
+QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.16](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.16/JACUSA_v2.1.16.jar) is included, featuring subsampled scores that improve the signal-to-noise ratio for identifying tRNA modifications.
 
 Finally, a filter framework has been added to the analysis workflow to remove spurious alignments by applying the following filters:
 
@@ -66,35 +66,36 @@ In summary, the sample description `<SAMPLE_DESC>` must be a TAB-separated file 
 
 See the files in the `QutRNA2/examples` folder for documented YAML and toy examples for sample tables. QutRNA2 distinguishes the configuration of the analysis and the data. The following analysis types are supported: 
 
-map reads with gpu-tRNA-mapper (see `QutRNA2/examples/analysis/map_with_gpu.yaml`),
-map reads with parasail (see `QutRNA2/examples/analysis/map_with_parasail.yaml`), and
-use exisiting mapping (see `QutRNA2/examples/analysis/existing_mapping.yaml.
+* map reads with gpu-tRNA-mapper (see `QutRNA2/examples/analysis/map_with_gpu.yaml`),
+* map reads with parasail (see `QutRNA2/examples/analysis/map_with_parasail.yaml`), and
+* use exisiting mapping (see `QutRNA2/examples/analysis/existing_mapping.yaml`.
+
 QutRNA2 supports the following approaches to assign Sprinzl coordinates :
-using a covarince model and secondary structure alignment (QutRNA2/examples/data/sprinzl_cm.yaml`),
-using an existing aligned FASTA file (QutRNA2/examples/data/sprinzl_afasta.yaml`), or
-a direct mapping of sequence to Sprinzl coordinates.
-Those files are templates and must adusted to the user's needs.
+
+* using a covarince model and secondary structure alignment (see `QutRNA2/examples/data/sprinzl_cm.yaml`),
+* using an existing aligned FASTA file (see `QutRNA2/examples/data/sprinzl_afasta.yaml`), or
+* a direct mapping of sequence to Sprinzl coordinates (see `QutRNA2/examples/data/seq_to_sprinzl.yaml`)).
+
+Those files are templates and must be adjusted to the user's needs.
 
 ## Setup data configuration
-First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" - they directly correspond to columns - see `examples/sample_desc.tsv`.
+First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" or "bam" - they directly correspond to columns - see `examples/sample_desc_fastq.tsv`.
 Data for entries with the same "sample_name" will be merged - they represent technical replicates. For historical reasons, the column "base_calling" is present. Set it to "pass". Finally, the column "fastq" should point to the path of the reads corresponding to the specified entry.
 
-Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
+Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
 
 ### Sprinzl
 For eukaryotic nuclear tRNAs, we use the following covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and labeling `data/nuclear-euk-masked.txt`.
 
 For human mt-tRNAs, we use the sequence to Sprinzl mapping in [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6) 
-and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`. If you provide labels, ensure the first label is a "-"!
+and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`.
 
 It is crucial to obtain covariance models for the organism and tRNAs studied. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
 
 ## Setup analysis configuration
-Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis.yaml` for examples. Add any necessary init code for GPU and provide paths for JACUSA2 and the gpu-tRNA-mapper, if they are unavailable in the standard path.
+Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. Add any necessary init code for the GPU and provide paths for JACUSA2 and gpu-tRNA-mapper if they are not in the standard path.
 
 ## Examples
-
-
 
 ## Execute workflow
 If not done yet, activate qutrna2 conda environment:
@@ -132,7 +133,7 @@ When the analysis is finished, the `<ANALYSIS_OUTPUT>` directory will contain th
 "data", "info", "logs", and "results".
 
 `<ANALYSIS_OUTPUT>/data/` will contain all unprocessed data used in the analysis.
-`<ANALYSIS_OUTPUT>/info/` will contain some runtime information and the used configuration files to track used parameters.
+`<ANALYSIS_OUTPUT>/info/` will contain runtime information and the configuration files used to track parameters.
 `<ANALYSIS_OUTPUT>/logs/` will contain logs for executed jobs.
 `<ANALYSIS_OUTPUT>/results/` will contain all calculations.
 
