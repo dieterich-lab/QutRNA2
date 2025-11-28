@@ -64,7 +64,16 @@ In summary, the sample description `<SAMPLE_DESC>` must be a TAB-separated file 
 | --------- | ----------- | -------------- | ------------ | ---------- |
 | ...       | ...         | ...            | ...          | ...        |
 
-See the files in the `QutRNA2/examples` folder. There is documentation for the available options.
+See the files in the `QutRNA2/examples` folder for documented YAML and toy examples for sample tables. QutRNA2 distinguishes the configuration of the analysis and the data. The following analysis types are supported: 
+
+map reads with gpu-tRNA-mapper (see `QutRNA2/examples/analysis/map_with_gpu.yaml`),
+map reads with parasail (see `QutRNA2/examples/analysis/map_with_parasail.yaml`), and
+use exisiting mapping (see `QutRNA2/examples/analysis/existing_mapping.yaml.
+QutRNA2 supports the following approaches to assign Sprinzl coordinates :
+using a covarince model and secondary structure alignment (QutRNA2/examples/data/sprinzl_cm.yaml`),
+using an existing aligned FASTA file (QutRNA2/examples/data/sprinzl_afasta.yaml`), or
+a direct mapping of sequence to Sprinzl coordinates.
+Those files are templates and must adusted to the user's needs.
 
 ## Setup data configuration
 First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" - they directly correspond to columns - see `examples/sample_desc.tsv`.
@@ -83,6 +92,10 @@ It is crucial to obtain covariance models for the organism and tRNAs studied. Th
 ## Setup analysis configuration
 Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis.yaml` for examples. Add any necessary init code for GPU and provide paths for JACUSA2 and the gpu-tRNA-mapper, if they are unavailable in the standard path.
 
+## Examples
+
+
+
 ## Execute workflow
 If not done yet, activate qutrna2 conda environment:
 ```console
@@ -93,12 +106,12 @@ Use `<ANALYSIS_OUTPUT>` folder to define where QutRNA2 should write the output t
 ```console
 snakemake \
     -c 1 \
- 	--snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
-	--use-conda \
-	--configfiles <ANALYSIS_YAML> \
+    --snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
+    --use-conda \
+    --configfiles <ANALYSIS_YAML> \
         --config pepfile=<DATA_YAML> \
         --directory <ANALYSIS_OUTPUT> \
-	-n 
+    -n 
 ```
 You should see a list of necessary jobs to be run.
 You should increase "-c 1" to whatever suits your computing machine.
@@ -107,9 +120,9 @@ Now, you can start the analysis (remove "-n")
 ```console
 snakemake \
     -c 1 \
- 	--snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
-	--use-conda \
-	--configfiles <ANALYSIS_YAML> \
+    --snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
+    --use-conda \
+    --configfiles <ANALYSIS_YAML> \
         --config pepfile=<DATA_YAML> \
         --directory <ANALYSIS_OUTPUT>
 ```
@@ -146,5 +159,4 @@ If filters were applied, the directory `<ANALYSIS_OUTPUT>/results/stats` will co
 
 ### secondary structure (ss)
 `<ANALYSIS_OUTPUT>/results/seq_to_sprinzl_filtered.tsv` will contain the sequence to sprinzl mapping.
-
 

@@ -1,0 +1,25 @@
+# Template for a data pep file that specifies details about the data.
+# The following template uses a direct mapping of sequence to Sprinzl coordinates.
+
+pep_version: 2.0.0 # (required) This defines the version of the pep file
+sample_table: sample_table.tsv # (required) change to the path of your sample table file
+
+
+qutrna2: # qutrna2 related options go here
+  coords: sprinzl # (required) use Sprinzl position
+  sprinzl:
+    # path to Sprinzl labels of the alignment consensus
+    labels: data/human_mt_sprinzl_labels.txt
+    seq_to_sprinzl: human_mt_seq_to_sprinzl.tsv
+    # (optional) regular expression to ignore
+    # sequence IDs for Sprinzl transformation
+    ignore_trnas: ^MT
+  ref_fasta:
+    file: reference.fasta # (required) change to path of reference fasta
+  linker5: 24 # 5' linker length
+  linker3: 32 # 3' linker length
+  contrasts: # define multiple contrasts if desired. Make sure that conditions are from the "condition" column in the sample table.
+    - cond1: conditionA # name of 1st condition (make sure this is a value from column "condition" in sample_table)
+      cond2: conditionB # name of 2nd condition (make sure this is a value from column "condition" in sample_table)
+    - cond1: conditionA
+      cond2: condition

@@ -1,0 +1,5 @@
+condition	sample_name	subsample_name	base_calling	bam
+conditionA	sample_1	subsample_1_1	pass	mapped_reads1.bam
+conditionB	sample_2	subsample_2_1	pass	mapped_reads2.bam
+conditionC	sample_3	subsample_3_1	pass	mapped_reads3.bam
+

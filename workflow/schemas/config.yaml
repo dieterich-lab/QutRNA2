@@ -113,7 +113,7 @@ properties:
         default: jacusa2
       opts:
         type: string
-        default: -f X:reads:nonref_ratio:insertion_ratio:deletion_ratio -u DirMult:subsampleRuns=100 -m 1 -q 1 -D -i -P1 FR-SECONDSTRAND -P2 FR-SECONDSTRAND
+        default: -Q 20 -f X:reads:nonref_ratio:insertion_ratio:deletion_ratio -u DirMult:subsampleRuns=100 -m 1 -q 1 -D -i -P1 FR-SECONDSTRAND -P2 FR-SECONDSTRAND
       min_cov:
         type: integer
         default: 10

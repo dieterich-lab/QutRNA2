@@ -1,0 +1,86 @@
+# The following contains a template config for analysing existing mapping.
+# Make sure that the corresponding BAM files are listed in the sample table in the "bam" column.
+# Occasionally, default values are shown, and a short description of the options is provided.
+
+jacusa2: # JACUSA2 related parameters
+  jar: jacusa2 # (optional) overwrite default path to JACUSA2 jar
+  # (optional) overwrite default parameters to JACUSA2
+  opts: -Q 20 -f X:reads:nonref_ratio:insertion_ratio:deletion_ratio -A -u DirMult:subsampleRuns=100 -m 1 -q 1 -D -i -P1 FR-SECONDSTRAND -P2 FR-SECONDSTRAND
+  min_cov: 10 # (optional) overwrite default minimum required reads
+
+# (optional) uncomment if you want to transform DNA to RNA
+#transform:
+#  fastq:
+#    base_change: U2T # transform fastq DNA to RNA
+
+
+# Filtering pipeline - order matters!
+# Applies each defined filter successively on mapped read.
+# Filters can be commented out or changing "apply: True|False" to change behaviour
+filter:
+  random_alignment: # available only if mapping reads
+    apply: True
+    precision: 0.99 # (required) Change default value of precision to calibrate alignment score offset
+    min_aln_score: 10 # (required) change default value of minimum alignment score to consider for calibration
+#  samtools: # execute samtools view with some filtering
+#    filter: # 'samtools view' opts, default: "-F 3328"
+#    callmd: #  set to true, to fix MD field with samtools
+  ignore_trnas: # remove tRNAs defined in the data.yaml from BAM files. 
+    apply: True
+  adapter_overlap: # retain reads that ovrlap with a porition of 5' and 3' adapters
+    apply: True
+    five_linker_overlap: 0.2 # possible values: [0.0 - 1.0]
+    three_linker_overlap: 0.2 # possivle Values: [0.0 - 1.0]
+  multimapper: # remove reads with multiple mapping locations
+    apply: True
+
+call_filtered: False # change this to True to plot heatmaps for each filtering step from the filtering pipeline
+
+# Plots are defined in the following
+plots:
+  read_length: # read length plots
+    # Each plot consists of an "id", the name of the plot, and "opts" to forward to the plot script
+    # Use "--limits min,max" to limit the plot area
+    # Use "--type condition|sample|subsample" to aggregate reads according to the description in the sample table.
+    - id: zoom_condition
+      opts: --limits 1,250 --type condition
+    - id: zoom_sample
+      opts: --limits 1,250 --type sample
+    - id: zoom_subsample
+      opts: --limits 1,250 --type subsample
+    - id: outlier_condition
+      opts: --limits 251,NA --type condition
+    - id: outlier_sample
+      opts: --limits 251,NA --type sample
+    - id: outlier_subsample
+      opts: --limits 251,NA --type subsample
+  record_count: # read count plots
+    # Each plot consists of an "id", the name of the plot, and "opts" to forward to the plot script
+    # Use "--show_percent" to add additional info to the plots
+    - id: show_percent
+      opts: --show_percent
+  heatmap: # here heatmap plots are defined.
+    # Each heatmap plot consists of an "id", the name of the plot, and additional options
+    - id: all_trnas_M-subsampled
+      # add a customizable title to the heatmap. Use the wildcards {} in the following:
+      title: '{condition1}, {condition2}, {score}, {bam_type}, {position_column}, {anti_codon}, {amino_acid}'
+      # add additional options to plot_heatmap.R script.
+      # Check plot_heatmap.R for all options!
+      # For example: The sort order of the tRNAs in the heatmap can be defined by "--sort_by trna|coverage"
+      opts: "--sort_by trna --hide_varm"
+      # Define here <name-of-score>::<score-columns>
+      # score_columns:
+      # * norm_mismatch_score_subsampled corresponds to subsampled mismatch score,
+      # * norm_insertion_score_subsampled corresponds to subsampled inseriton score, and
+      # * norm_deletion_score_subsampled corresponds to subsampled deletion score
+      # use '+' for linear combination of scores:
+      # "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
+      # In the following, only the subsampled mismatch score is used.
+      score: "M_subsampled::norm_mismatch_score_subsampled"
+    - id: trnas_bys_aa_M-subsampled
+      # group heatmap plots by amino_acid.
+      group: amino_acid
+      opts: "--sort_by trna --hide_varm"
+      score: "M_subsampled::norm_mismatch_score_subsampled"
+      # use NONE, MAX_SCORE or a numeric value to enforce equal color scaling of the score in all heatmaps
+      harmonize_scaling: CONTRASTS

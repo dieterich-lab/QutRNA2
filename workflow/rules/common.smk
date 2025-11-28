@@ -15,7 +15,7 @@ wildcard_constraints:
 
 
 # Default JACUSA2 score to use: label::score1+score2+... see add_scores.R
-DEFAULT_SCORE = "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
+DEFAULT_SCORE = "M_subsampled::norm_mismatch_score_subsampled"
 
 
 ########################################################################################################################
