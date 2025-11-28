@@ -3,7 +3,7 @@ import os
 from snakemake.io import expand
 
 
-VERSION = "2.0.0-DEV-13"
+VERSION = "2.0.0"
 
 pepfile: config["pepfile"]
 pepschema: "schemas/pep.yaml"
@@ -33,7 +33,6 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   include: "rules/sec_structure.smk"
 include: "rules/plot.smk"
 include: "rules/info.smk"
-include: "rules/report.smk"
 
 ruleorder: fastq_read_count > samtools_record_count
 ruleorder: fastq_read_length > samtools_read_length
@@ -89,7 +88,7 @@ def target_all():
 ########################################################################################################################
 
 rule all:
-  input: lambda wildcards: target_all() + target_info() + target_report()
+  input: lambda wildcards: target_all() + target_info()
 
 ########################################################################################################################
 
@@ -108,10 +107,6 @@ if READS == "fastq":
   rule alignment:
     input: target_alignment() + target_info()
 
-########################################################################################################################
-
-def target_report():
-  return ["results/report/report.html", ]
 
 ########################################################################################################################
 
