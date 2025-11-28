@@ -678,7 +678,7 @@ process_sprinzl_coords <- function(df, sprinzl_fname, hide_varm, show_introns, i
   # remove positions with no sprinzl mapping
   df <- df[!is.element(df$sprinzl, c("-", ".")), ] # - -> gap, . unmatched
   sprinzl_coords <- read.table(sprinzl_fname, header = FALSE)$V1
-  i <- sprinzl_coords == "-"
+  i <- sprinzl_coords %in% c("-")
   sprinzl_coords <- sprinzl_coords[!i]
 
   if (hide_varm) {

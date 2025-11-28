@@ -1,6 +1,6 @@
 ---
 title: {{ pep["project"]["qutrna2"]["title"] }}
-author: Generated with <a href="https://github.com/dieterich-lab/QutRNA2" target="_blank">QutRNA2"</a>
+author: Generated with <a href="https://github.com/dieterich-lab/QutRNA2" target="_blank">QutRNA2</a>
 ---
 
 <style>
@@ -22,10 +22,11 @@ tr:nth-child(even) {
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+knitr::knit_hooks$set(crop = knitr::hook_pdfcrop)
 library(patchwork)
 ```
 
-
+<p>
 <a href="https://github.com/dieterich-lab/QutRNA2" target="_blank">
 ```{r, echo=FALSE}
 htmltools::img(src = "{{ basedir }}/report/lab_logo.png",
@@ -33,6 +34,7 @@ htmltools::img(src = "{{ basedir }}/report/lab_logo.png",
                style = "width: 90px; float: left; padding:10px;")
 ```
 </a>
+</p>
 
 <br/>
 <br/>

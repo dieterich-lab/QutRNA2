@@ -105,6 +105,10 @@ option_list <- list(
               action = "store_true",
               default = FALSE,
               help = "Hide variable arm coordinates"),
+  make_option(c("--norm_score"),
+              action = "store_true",
+              default = FALSE,
+              help = "Normalize scores for eatch tRNA"),
   make_option(c("--hide_mods"),
               action = "store_true",
               default = FALSE,
@@ -332,6 +336,14 @@ if (!is.null(opts$options$mark_position)) {
 # process score columns
 df$score <- df[, opts$options$score_column]
 df$score[df$score < 0] <- 0
+
+if (opts$options$norm_score) {
+  df <- df |>
+    group_by(trna) |>
+    mutate(score = score / max(score)) |>
+    ungroup()
+}
+
 df$exceed_max_score <- FALSE
 if (!is.null(opts$options$max_score)) {
   i <- df$score > opts$options$max_score

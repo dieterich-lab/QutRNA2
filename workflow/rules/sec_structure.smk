@@ -10,20 +10,18 @@ global REF_FILTERED_TRNAS_FASTA
 # final sequence to sprinzl mapping
 SEQ_TO_SPRINZL_FINAL = "results/ss/seq_to_sprinzl_filtered.tsv"
 
-# consensus annotation
-SPRINZL_LABELS = "data/sprinzl_labels.txt"
-create_include("sprinzl_labels",
-  pep.config["qutrna2"]["sprinzl"]["labels"],
-  SPRINZL_LABELS,
-  config["include"].get("sprinzl_labels","copy"))
-
 # in case of sprinzl, handle if model or precalculated mapping is to be used
 if pep.config["qutrna2"]["coords"] == "sprinzl":
-
   # How mapping to sprinzl coordinates are calculated, by alignment or from existing mapping
   # cm -> covarince model -> calculate secondary structure alignment and create mapping
   # seq_to_sprinzl -> use exisiting mapping
   if "cm" in pep.config["qutrna2"]["sprinzl"]:
+    SPRINZL_LABELS = "data/sprinzl_labels.txt"
+    create_include("sprinzl_labels",
+        pep.config["qutrna2"]["sprinzl"]["labels"],
+        SPRINZL_LABELS,
+        config["include"].get("sprinzl_labels","copy"))
+
     SPRINZL_MODE = "cm"
     # covariance model destination
     CM = "data/cm.stk"
@@ -84,12 +82,27 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
       AFASTA,
       config["include"].get("afasta", "copy"))
     SEQ_TO_SPRINZL_INIT = "results/ss/seq_to_sprinzl.tsv"
-    CONSENSUS_LABELS = "results/data/consensus_labels.tsv"
+    _CONSENSUS_LABELS = "data/consensus_labels.tsv"
     create_include("consensus_labels",
       pep.config["qutrna2"]["sprinzl"]["consensus_labels"],
-      CONSENSUS_LABELS,
-      config["include"]["consensus_labels"])
+      _CONSENSUS_LABELS,
+      config["include"].get("consensus_labels", "copy"))
+    SPRINZL_LABELS = _CONSENSUS_LABELS
+    CONSENSUS_LABELS = "results/data/consensus_labels.tsv"
+
+    rule process_consensus:
+      input: _CONSENSUS_LABELS
+      output: CONSENSUS_LABELS
+      shell: """
+        awk ' BEGIN {{ print "label" }} ; {{ print }} ' {input:q} > {output:q}
+      """
+
   elif "seq_to_sprinzl" in pep.config["qutrna2"]["sprinzl"]:
+    SPRINZL_LABELS = "data/sprinzl_labels.txt"
+    create_include("sprinzl_labels",
+        pep.config["qutrna2"]["sprinzl"]["labels"],
+        SPRINZL_LABELS,
+        config["include"].get("sprinzl_labels","copy"))
     SPRINZL_MODE = "seq2sprinzl"
     SEQ_TO_SPRINZL_INIT = "data/seq_to_sprinzl.tsv"
     create_include("seq_to_sprinzl",

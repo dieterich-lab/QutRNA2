@@ -50,10 +50,10 @@ def get_heatmap_plots(ftype):
   plots = {}
 
   contrasts = pep.config["qutrna2"]["contrasts"]
-  bam_types = []
+  bam_types = ["final"]
   if config["call_filtered"]:
-    bam_types = [f"filtered-{f}" for f in FILTERS_APPLIED]
-  bam_types.append("final")
+    for f in FILTERS_APPLIED:
+      bam_types.append(f"filtered-{f}")
   for plot in config["plots"]["heatmap"]:
     plot_id = plot["id"]
     for contrast in contrasts:

@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+F#!/usr/bin/env Rscript
 
 require(optparse)
 require(yardstick)

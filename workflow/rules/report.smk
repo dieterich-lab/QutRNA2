@@ -66,17 +66,16 @@ def _report_create_params(wildcards):
   targets.extend(flatten_dict(get_read_feature_plots("rds")))
 
   # add heatmap plots files.txt
-  conds1 = [contrast["cond1"] for contrast in pep.config["qutrna2"]["contrasts"]]
-  conds2 = [contrast["cond2"] for contrast in pep.config["qutrna2"]["contrasts"]]
   plot_ids = [plot["id"] for plot  in config["plots"]["heatmap"]]
   bam_types = []
   if config["call_filtered"]:
     bam_types = [f"filtered-{f}" for f in FILTERS_APPLIED]
   bam_types.append("final")
-  targets.extend(expand("results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv",
-    cond1=conds1, cond2=conds2,
-    plot_id=plot_ids,
-    bam_type=bam_types))
+  for contrast in pep.config["qutrna2"]["contrasts"]:
+    targets.extend(expand("results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv",
+      cond1=contrast["cond1"], cond2=contrast["cond2"],
+      plot_id=plot_ids,
+      bam_type=bam_types))
 
   return targets
 
@@ -135,4 +134,4 @@ rule report_create_params:
     except FileExistsError:
       pass
     with open(output[0], "w") as f:
-      yaml.safe_dump(d, f)
+      yaml.safe_dump(d, f, sort_keys=False)

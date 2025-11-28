@@ -3,8 +3,6 @@ import re
 
 from snakemake.io import expand
 
-
-
 global DEFAULT_SCORE
 global FILTERS_APPLIED
 global MODS

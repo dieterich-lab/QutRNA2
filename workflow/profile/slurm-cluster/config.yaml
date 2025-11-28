@@ -17,7 +17,7 @@ set-resources:
   aggregate_feature:
     mem_mb: 10000
   parasail_infer_cutoff:
-    mem_mb: 20000
+    mem_mb: 200000
   filter_trim_cigar:
     mem_mb: 10000
   filter_alignment_length:
