@@ -100,7 +100,7 @@ dependencies:
   - immutables=0.21=py312h4c3975b_2
   - infernal=1.1.5=pl5321h7b50bb2_4
   - iniconfig=2.0.0=pyhd8ed1ab_1
-  - jacusa2=2.1.15=0
+  - jacusa2=2.1.16=0
   - jinja2=3.1.6=pyhd8ed1ab_0
   - jq=1.8.1=h73b1eb8_0
   - jsonschema=4.25.1=pyhe01879c_0

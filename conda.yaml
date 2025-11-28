@@ -7,7 +7,7 @@ channels:
   - defaults
 dependencies:
   - gpu-trna-mapper
-  - JACUSA2=2.1.15
+  - JACUSA2=2.1.16
   - bioconductor-summarizedexperiment
   - bioconductor-rsamtools
   - r-base
