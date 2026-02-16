@@ -64,7 +64,7 @@ option_list <- list(
   make_option(c("--max_scores"),
               type = "character",
               help = "File with max scores"),
-  # which columns to use  
+  # which columns to use
   make_option(c("--position_column"),
               type = "character",
               default = "seq_position",
@@ -92,7 +92,11 @@ option_list <- list(
               type = "character",
               default = "condition 2",
               help = "Condition 2"),
-  # hide/show features  
+  # hide/show features
+  make_option(c("--keep_negative_score"),
+              action = "store_true",
+              default = FALSE,
+              help = "Keep negative score"),
   make_option(c("--estimate_coverage"),
               action = "store_true",
               default = FALSE,
@@ -117,7 +121,7 @@ option_list <- list(
               action = "store_true",
               default = FALSE,
               help = "Show intron positions"),
-  # output    
+  # output
   make_option(c("--group"),
               type = "character",
               help = "Group plots by: 'amino_acid', 'anti_codon', or 'amino_acid,anti_codon'. If empty, plot all tRNAs in one plot."),
@@ -135,7 +139,7 @@ option_list <- list(
               action = "store_true",
               default = FALSE,
               help = "Do NOT crop final pdf"),
-  # filter positions or tRNAs  
+  # filter positions or tRNAs
   make_option(c("--flag_positions"),
               type = "character",
               help = "Flag positions, e.g.: tRNA:position, use ','"),
@@ -280,7 +284,7 @@ if (!is.null(opts$options$ignore_trnas)) {
     filter(is.element(trna, trna_annotation$trna))
 }
 if (!is.null(opts$options$min_reads)) {
-  trnas <- df |> 
+  trnas <- df |>
     filter(if_all(starts_with("reads"), ~ . > !!opts$options$min_reads)) |>
     pull(trna) |>
     unique()
@@ -335,7 +339,9 @@ if (!is.null(opts$options$mark_position)) {
 
 # process score columns
 df$score <- df[, opts$options$score_column]
-df$score[df$score < 0] <- 0
+if (!opts$options$keep_negative_score) {
+  df$score[df$score < 0] <- 0
+}
 
 if (opts$options$norm_score) {
   df <- df |>
@@ -374,7 +380,7 @@ if (!is.null(df$mods) && any(df$mods != "") && !opts$options$hide_mods) {
           dplyr::filter(is.element(short_name, mods)) |>
           pull(abbrev) |>
           paste0(collapse = " ")
-        
+
         return(mod_abbrevs)
       })
     df$mod_abbrevs <- unlist(abbrevs)
@@ -395,15 +401,15 @@ df <- add_missing_values(df)
 if (!is.null(opts$options$positions)) {
   positions <- strsplit(opts$options$positions, ",") |>
     unlist()
-  
+
   src <- as.character(df[[opts$options$position_column]])
   dst <- as.character(positions)
-  
+
   i <- is.element(src, dst)
   if (any(i)) {
     df <- df[i, ]
   }
-  
+
   return(df)
 }
 
@@ -420,7 +426,7 @@ if (!is.null(opts$options$score_quantile)) {
   scores <- df |>
     filter(!is.na(score)) |>
     pull(score)
-  
+
   min_score <- quantile(scores, prob = opts$options$score_quantile, names = FALSE)
   trnas <- df |>
     filter(score >= min_score) |>
@@ -432,7 +438,7 @@ if (!is.null(opts$options$score_quantile)) {
 
 ################################################################################
 
-# group data and create plots  
+# group data and create plots
 plots <- group_trna(opts$options$group,
                     df, coverage_summary,
                     opts$options$output_dir,

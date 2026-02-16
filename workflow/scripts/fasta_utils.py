@@ -67,9 +67,20 @@ def do_base_change(record, base1, base2):
     return record
 
 
-def do_reverse(record):
+def do_reverse(record, linker5=0, linker3=0):
     record.id = f"{record.id}_rev"
-    record.seq = record.seq[::-1]
+    s = record.seq
+
+    start = linker5
+    end = len(s) - linker3
+    l5 = ""
+    if linker5 > 0:
+        l5 = s[0:start]
+    l3 = ""
+    if linker3 > 0:
+        l3 = s[(len(s) - linker3):len(s)]
+    trna = s[start:end][::-1]
+    record.seq = f"{l5}{trna}{l3}"
 
     return record
 
@@ -77,6 +88,8 @@ def do_reverse(record):
 @cli.command()
 @click.option("-5", "--linker5", type=str)
 @click.option("-3", "--linker3", type=str)
+@click.option("--linker5-length", type=int, default=0)
+@click.option("--linker3-length", type=int, default=0)
 @click.option("--remove-linker5", type=int)
 @click.option("--remove-linker3", type=int)
 @click.option("-c", "--base-change", type = click.Choice(BaseChange, case_sensitive=False), help="Base change: U2T or T2U.")
@@ -85,7 +98,7 @@ def do_reverse(record):
 @click.option("-u", "--unique-seq", is_flag=True, default=False, help="Only unique sequences.")
 @click.option("-o", "--output", required=True, type=click.Path())
 @click.argument("FASTA", type=click.Path())
-def transform(fasta, linker5, linker3, remove_linker5, remove_linker3, base_change, ignore, reverse, unique_seq, output):
+def transform(fasta, linker5, linker3, linker5_length, linker3_length, remove_linker5, remove_linker3, base_change, ignore, reverse, unique_seq, output):
     """Transform fasta"""
 
     tasks = []
@@ -101,7 +114,10 @@ def transform(fasta, linker5, linker3, remove_linker5, remove_linker3, base_chan
         tasks.append(helper)
 
     if reverse:
-        tasks.append(do_reverse)
+        def helper(record):
+            return do_reverse(record, linker5_length, linker3_length)
+        tasks.append(helper)
+
 
     if linker5:
       def helper(record):

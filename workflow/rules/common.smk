@@ -149,7 +149,7 @@ elif "fastq" in pep.sample_table.columns:
         python {workflow.basedir}/scripts/fastq_utils.py transform --output {output:q} --base-change {params.base_change} {input:q} 2> {log:q}
       """
 
-  # How to calculate random alignment: rev_linker+trna, rev_trna
+  # How to calculate random alignment: rev_linker+trna, linker+rev_trna
   if config["alignment"]["random"] == "rev_linker+trna":
     rule fasta_reverse_linker_trna:
       input: REF_FASTA
@@ -159,7 +159,7 @@ elif "fastq" in pep.sample_table.columns:
       shell: """
           python {workflow.basedir}/scripts/fasta_utils.py transform --output {output:q} --reverse {input:q} 2> {log:q}
         """
-  elif config["alignment"]["random"] == "rev_trna":
+  elif config["alignment"]["random"] == "linker+rev_trna":
     rule fasta_reverse_trna_only:
       input: REF_FASTA
       output: REF_FASTA_RANDOM
@@ -170,8 +170,8 @@ elif "fastq" in pep.sample_table.columns:
       shell: """
           python {workflow.basedir}/scripts/fasta_utils.py transform \
             -r \
-            --remove-linker5 {params.linker5} \
-            --remove-linker3 {params.linker3} \
+            --linker5-length {params.linker5} \
+            --linker3-length {params.linker3} \
             --output {output:q} \
             {input:q} 2> {log:q}
         """

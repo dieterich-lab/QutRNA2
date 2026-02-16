@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-options(error=traceback)
+#options(error=traceback)
 
 # Process JACUSA2 scores and add additional data.
 library(GenomicRanges)
@@ -244,10 +244,11 @@ stopifnot(length(opts$args) == 1)
 summarise_ratio <- function(r, get_ratios, f) {
   by_conds <- split(colData(r), colData(r)$condition) |>
     lapply(rownames)
-  cols1 <- by_conds[[names(by_conds)[1]]]
-  cols2 <- by_conds[[names(by_conds)[2]]]
+  cols1 <- by_conds[[1]]
+  cols2 <- by_conds[[2]]
 
-  ratios <- get_ratios(r)
+
+  ratios <- assays(r)[[get_ratios]]
   if (length(cols1) > 1) {
     ratios1 <- f(ratios[, cols1])
   } else {
@@ -314,11 +315,11 @@ PARSE_COLS <- list("mismatch_score" = function(r) { return(rowData(r)$score) },
                    #
                    "mean_mismatch_score_downsampled" = function(r) { return(summarise_score(r, "score_downsampled", mean)) },
                    "mean_insertion_score_downsampled" = function(r) { return(summarise_score(r, "insertion_score_downsampled", mean)) },
-                   "mean_deletion_score_downsampled" = function(r) { return(summarise_score(r, "deletion_score_downsampled", mean)) })
+                   "mean_deletion_score_downsampled" = function(r) { return(summarise_score(r, "deletion_score_downsampled", mean)) },
                    #
-                   #"mean_non_ref_ratio" = function(r) { return(summarise_ratio(r, non_ref_ratio, rowMeans)) },
-                   #"mean_insertion_ratio" = function(r) { return(summarise_ratio(r, insertion_ratio, rowMeans)) } ,
-                   #"mean_deletion_ratio" = function(r) { return(summarise_ratio(r, deletion_ratio, rowMeans)) })
+                   "mean_nonref_ratio" = function(r) { return(summarise_ratio(r, "nonref_ratio", rowMeans)) },
+                   "mean_insertion_ratio" = function(r) { return(summarise_ratio(r, "insertion_ratio", rowMeans)) } ,
+                   "mean_deletion_ratio" = function(r) { return(summarise_ratio(r, "deletion_ratio", rowMeans)) })
 
 clean_score <- function(score) {
   tidyr::replace_na(score, 0)
@@ -357,7 +358,7 @@ parse_result <- function(r, stats) {
     cols <- c(cols, colnames(tmp))
     df <- cbind(df, tmp)
   }
-  
+
   # add ref and non_ref base_calls
   total_base_calls <- assays(r)$bases |>
     lapply(rowSums) |>
@@ -382,7 +383,7 @@ parse_result <- function(r, stats) {
   colnames(tmp) <- gsub("^bam", "nonref_base_calls", colnames(tmp))
   cols <- c(cols, colnames(tmp))
   df <- cbind(df, tmp)
-  
+
   for (col in pick_cols(stats$stat)) {
     if (!is.element(col, colnames(df))) {
       f <- PARSE_COLS[[col]]

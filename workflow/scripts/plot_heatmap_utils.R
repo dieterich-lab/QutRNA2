@@ -18,7 +18,7 @@ get_process_args <- function(opts) {
       stop("Unknown sort_by: ", opts$options$sort_by)
     }
   }
-  
+
   return(
     list(
       "sort_by_callback" = sort_by_callback
@@ -35,7 +35,7 @@ get_plot_args <- function(df, opts) {
     title <- gsub("\\{bam_type\\}", opts$options$bam_type, title)
     title <- gsub("\\{position_column\\}", opts$options$position_column, title)
   }
-  
+
   position_xlab <- "position"
   if (opts$options$position_column == "sprinzl") {
     position_xlab <- "Sprinzl pos."
@@ -44,14 +44,14 @@ get_plot_args <- function(df, opts) {
   } else {
     stop("Unknown position column: ", opts$options$position_column)
   }
-  
+
   coverage_xlab <- NULL
   if (!is.null(opts$options$estimate_coverage)) {
     coverage_xlab <- "median coverage"
   } else if (opts$options$coverage_info) {
     coverage_xlab <- "reads"
   }
-  
+
   harmonize_scaling <- opts$options$harmonize_scaling
   if (!is.null(harmonize_scaling)) {
     if (harmonize_scaling == "NONE") {
@@ -114,7 +114,7 @@ estimate_coverage_info <- function(df, condition1, condition2) {
              "1" ~ condition1,
              "2" ~ condition2)) |>
     as.data.frame()
-  
+
   # reorder condition
   df_condition <- coverage_summary |>
     dplyr::select(all_of(c("condition_i", "condition"))) |>
@@ -123,7 +123,7 @@ estimate_coverage_info <- function(df, condition1, condition2) {
   coverage_summary$condition <- factor(coverage_summary$condition,
                                        levels = df_condition$condition,
                                        ordered = TRUE)
-  
+
   return(coverage_summary |> dplyr::select(-all_of("condition_i")))
 }
 
@@ -214,16 +214,20 @@ plot_heatmap <- function(df, base_size = 9, xlab = "position",
           axis.title.y = element_blank(),
           plot.margin = margin(0, .5, 0, 0))
 
+  scale_f <- scale_fill_gradient
+  if (opts$options$keep_negative_score) {
+    scale_f <- scale_fill_gradient2
+  }
   # ensure same scaling for all plots
   if (!is.null(harmonize_scaling)) {
     p <- p +
-      scale_fill_gradient(low = "yellow", high = "blue",
-                          na.value = "grey",
-                          limits = c(0, harmonize_scaling), oob = scales::squish)
+      scale_f(low = "yellow", high = "blue",
+              na.value = "grey",
+              limits = c(0, harmonize_scaling), oob = scales::squish)
   } else {
     p <- p +
-      scale_fill_gradient(low = "yellow", high = "blue",
-                          na.value = "grey")
+      scale_f(low = "yellow", high = "blue",
+              na.value = "grey")
   }
 
   # mark flagged positions

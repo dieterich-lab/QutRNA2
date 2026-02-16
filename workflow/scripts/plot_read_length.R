@@ -76,8 +76,8 @@ df <- df |>
   mutate(read_type = factor(read_type, levels = unique(read_type), ordered = TRUE))
 
 plot <- df |>
-  ggplot(aes(x = read_length, weight = reads, colour = !!sym(opts$options$type))) +
-  geom_density() +
+  ggplot(aes(x = read_length, weight = reads, fill = !!sym(opts$options$type), colour = !!sym(opts$options$type))) +
+  geom_density(aes(linetype = !!sym(opts$options$type)), alpha = 0.1) +
   labs(x = "read length [nt]") +
   guides(colour = guide_legend(opts$options$type)) +
   theme_bw() +
@@ -99,30 +99,31 @@ if (is.null(opts$options$breaks)) {
     as.integer()
 }
 
-plot <- plot + 
+plot <- plot +
   scale_x_continuous(limits = limits,
                      breaks = breaks)
 
 if (length(unique(df$base_calling)) == 1) {
-  plot <- plot + 
+  plot <- plot +
     facet_wrap(read_type ~ ., ncol = 1)
 } else {
-  plot <- plot + 
+  plot <- plot +
     facet_grid(read_type ~ base_calling, labeller = function(...) { return(label_both(sep = ":\n", ...)) })
 }
+
 
 infer_height <- function(df) {
   read_types <- df$read_type |>
     unique() |>
     length()
-  
-  height <- read_types * 1.1
-  
+
+  height <- read_types * 1.3
+
   return(height)
 }
 infer_width <- function(df) {
   width <- 8
-  
+
   return(width)
 }
 infer_ggsave_opts <- function(df, ggsave_opts) {

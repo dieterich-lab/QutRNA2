@@ -71,7 +71,7 @@ properties:
         default: 10
       random:
         type: string
-        enum: ["rev_linker+trna", "rev_trna"]
+        enum: ["rev_linker+trna", "linker+rev_trna"]
         default: "rev_linker+trna"
       method:
         type: string

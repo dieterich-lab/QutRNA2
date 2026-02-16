@@ -112,18 +112,18 @@ infer_height <- function(df) {
   types <- df[, opts$options$type] |>
     unique() |>
     length()
-  
+
   read_types <- df$read_type |>
     unique() |>
     length()
-  
-  height <- types * read_types * 0.3
-  
+
+  height <- types * read_types * 0.4
+
   return(height)
 }
 infer_width <- function(df) {
   width <- 8
-  
+
   return(width)
 }
 infer_ggsave_opts <- function(df, ggsave_opts) {
