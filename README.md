@@ -80,7 +80,7 @@ Those files are templates and must be adjusted to the user's needs.
 
 ## Setup data configuration
 First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" or "bam" - they directly correspond to columns - see `examples/sample_desc_fastq.tsv`.
-Data for entries with the same "sample_name" will be merged - they represent technical replicates. For historical reasons, the column "base_calling" is present. Set it to "pass". Finally, the column "fastq" should point to the path of the reads corresponding to the specified entry.
+Data for entries with the same "sample_name" will be merged - they represent technical replicates. For historical reasons, the column "base_calling" is present. Set it to "pass". Finally, the column "fastq" should point to the path of the compressed (gzip) fastq file.
 
 Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
 
