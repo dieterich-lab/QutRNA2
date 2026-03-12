@@ -87,9 +87,13 @@ class FilterRandomAlignment(Filter):
 
   def _process(self):
     self.input["cutoff"] = "results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}_stats/cutoff.tsv"
-    self.params["min_as"] = self.config["min_aln_score"]
+
+    # Schema-level default (if applied) for minimum alignment score (AS) should populate this value.
+    min_as = self.config.get("min_aln_score", config.get("alignment", {}).get("min_aln_score"))
+    self.params["min_as_opt"] = f"--min-as {min_as}" if min_as is not None else ""
+
     self.cmds.append(
-      f"python {workflow.basedir}/scripts/bam_utils.py filter --cutoffs {{input.cutoff:q}} --min-as {{params.min_as}} --output {{output.bam:q}} {{input.bam:q}}")
+      f"python {workflow.basedir}/scripts/bam_utils.py filter --cutoffs {{input.cutoff:q}} {{params.min_as_opt}} --output {{output.bam:q}} {{input.bam:q}}")
 
     return True
 
