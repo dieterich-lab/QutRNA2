@@ -231,7 +231,7 @@ rule plot_read_length_custom:
 
 rule plot_threshold_summary:
   input: score="results/stats/alignment_score.txt",
-         cutoff="results/stats/cutoff.txt"
+         cutoff="results/stats/cutoff.tsv"
   output: pdf="results/plots/alignment/threshold_summary.pdf",
           rds="results/plots/alignment/threshold_summary.rds"
   conda: "qutrna2"
@@ -249,7 +249,7 @@ rule plot_threshold_summary:
   """
 rule plot_threshold_summary_custom:
   input: score="results/stats/alignment_score.txt",
-    cutoff="results/stats/cutoff.txt"
+    cutoff="results/stats/cutoff.tsv"
   output: pdf="results/plots/alignment/threshold_summary/custom/{plot_id}.pdf",
           rds="results/plots/alignment/threshold_summary/custom/{plot_id}.rds"
   conda: "qutrna2"
