@@ -89,7 +89,7 @@ rule samtools_alignment_score:
   conda: "qutrna2"
   log: "logs/samtools/alignment_score/{prefix}.log"
   shell: """
-    python {workflow.basedir}/scripts/bam_utils.py count-tag -t AS -c alignment_score --output {output:q} {input:q} 2> {log:q}
+    python {workflow.basedir}/scripts/bam_utils.py count-trna-wise-tag -t AS -c alignment_score --output {output:q} {input:q} 2> {log:q}
   """
 
 

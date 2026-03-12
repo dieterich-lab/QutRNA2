@@ -149,6 +149,28 @@ def count_tag(bam, tag, column, output):
 
 
 @cli.command()
+@click.option("-t", "--tag", required=True, type=str)
+@click.option("-c", "--column", required=True, type=str)
+@click.option("-o", "--output", type=click.Path())
+@click.argument("BAM", type=click.Path(exists=True))
+def count_trna_wise_tag(bam, tag, column, output):
+    """Count tag values per tRNA reference name"""
+
+    counts = defaultdict(Counter)
+    for read in pysam.AlignmentFile(pysam_stdin(bam), "rb"):
+        if read.reference_name is None:  # skip unmapped
+            continue
+        counts[read.reference_name][read.get_tag(tag)] += 1
+
+    with open(output, "w") if output else nullcontext(output) as f:
+        f.write(f"trna\t{column}\tcount\n")  # `trna<tab>column<tab>count`
+        for trna, tag_count in counts.items():
+            for key, count in tag_count.items():
+                line = "\t".join([trna, str(key), str(count)])
+                f.write(f"{line}\n")
+
+
+@cli.command()
 @click.option("--min-as", type=int)
 @click.argument("bam", type=click.Path(exists=True))
 def best_alignment(min_as, bam):
@@ -172,7 +194,7 @@ def best_alignment(min_as, bam):
     for record in in_samfile:
         # filter by alignment score
         alignment_score = int(record.get_tag("AS"))
-        if min_as and alignment_score < min_as:
+        if min_as is not None and alignment_score < min_as:
             continue
 
         if not qname or qname == record.query_name:
@@ -452,7 +474,8 @@ def do_trim_cigar(record):
 
 @cli.command()
 @click.option("--trim-cigar", is_flag=True)
-@click.option("--min-as", type=int)
+@click.option("--cutoffs", type=str)  # for trna-specific cutoffs TSV file
+@click.option("--min-as", type=int)  # for global cutoff as fallback
 @click.option("--min-read-length", type=int)
 @click.option("--max-read-length", type=int)
 @click.option("--min-alignment-length", type=int)
@@ -462,7 +485,7 @@ def do_trim_cigar(record):
 @click.argument("BAM", type=str)
 def filter(bam,
            trim_cigar,
-           min_as,
+           cutoffs, min_as,
            min_read_length, max_read_length,
            min_alignment_length, max_alignment_length,
            stats, output):
@@ -475,24 +498,50 @@ def filter(bam,
     # counter
     counter = Counter()
 
-    def do_filter_as(record, min_as):
-        alignment_score = int(record.get_tag("AS"))
-        if alignment_score >= min_as:
-            counter["alignment_score"] += 1
+    # load exact per-trna cutoffs from table for fast direct lookup.
+    # we intentionally key by exact reference name instead of regex matching.
+    cutoff_by_trna = {}
+    if cutoffs:
+        cutoff_df = pd.read_csv(cutoffs, sep="\t")
+        for _, row in cutoff_df.iterrows():
+            cutoff_by_trna[str(row["trna"])] = int(row["cutoff"])
+        sys.stderr.write(f"loaded {len(cutoff_by_trna)} cutoffs from {cutoffs}\n")
 
+    def do_filter_as(record):
+        trna_name = record.reference_name
+        as_score = int(record.get_tag("AS"))
+
+        # use the exact trna cutoff when available.
+        cutoff_val = cutoff_by_trna.get(trna_name)
+
+        # if this trna is missing from the table, use global fallback if provided.
+        if cutoff_val is None and min_as is not None:
+            cutoff_val = min_as
+
+        # if we still have no cutoff, reject to avoid uncalibrated keeps.
+        if cutoff_val is None:
+            counter["no_cutoff_match"] += 1
+            return False
+
+        if as_score >= cutoff_val:
+            counter["pass"] += 1
+            counter[f"pass_{trna_name}"] += 1
             return True
 
+        counter["fail"] += 1
+        counter[f"fail_{trna_name}"] += 1
         return False
+
 
     def do_check_read_length(record, min_length, max_length):
         read_length = len(record.query_sequence)
 
-        if min_length and min_length > read_length:
+        if min_length is not None and min_length > read_length:
             counter["read_length"] += 1
 
             return False
 
-        if max_length and max_length < read_length:
+        if max_length is not None and max_length < read_length:
             counter["read_length"] += 1
 
             return False
@@ -502,12 +551,12 @@ def filter(bam,
     def do_check_alignment_length(record, min_length, max_length):
         aln_length = record.reference_length
 
-        if min_length and min_length > aln_length:
+        if min_length is not None and min_length > aln_length:
             counter["aln_length"] += 1
 
             return False
 
-        if max_length and max_length < aln_length:
+        if max_length is not None and max_length < aln_length:
             counter["aln_length"] += 1
 
             return False
@@ -516,29 +565,29 @@ def filter(bam,
 
 
     tasks = []
-    if min_as:
-        def helper(record):
-            return do_filter_as(record, min_as)
-        tasks.append(helper)
+    if cutoffs or min_as is not None:
+        # Directly append the callable to keep the filter chain cheap and readable.
+        tasks.append(do_filter_as)
 
-    if min_read_length or max_read_length:
-        def helper(record):
-            return do_check_read_length(record, min_read_length, max_read_length)
-        tasks.append(helper)
+    if min_read_length is not None or max_read_length is not None:
+        # Bind values as default args so this task is independent of later variable rebinding.
+        def check_read_len(record, min_length=min_read_length, max_length=max_read_length):
+            return do_check_read_length(record, min_length, max_length)
+        tasks.append(check_read_len)
 
-    if min_alignment_length or max_alignment_length:
-        def helper(record):
-            return do_check_alignment_length(record, min_alignment_length, max_alignment_length)
-        tasks.append(helper)
+    if min_alignment_length is not None or max_alignment_length is not None:
+        # Same pattern as read-length: freeze option values once, then run per record.
+        def check_aln_len(record, min_length=min_alignment_length, max_length=max_alignment_length):
+            return do_check_alignment_length(record, min_length, max_length)
+        tasks.append(check_aln_len)
 
     if trim_cigar:
-        def helper(record):
+        # Trimming mutates the record in place, but should not itself reject records.
+        def trim_task(record):
             if do_trim_cigar(record):
                 counter["trim"] += 1
-
             return True
-
-        tasks.append(helper)
+        tasks.append(trim_task)
 
     for record in in_samfile:
         counter["input"] += 1

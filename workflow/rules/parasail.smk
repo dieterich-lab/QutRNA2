@@ -13,20 +13,23 @@ else:
     include: "parasail_map.smk"
 
 ########################################################################################################################
-# Filter alignments by random score distribution
+# filter alignments by random score distribution
 
 rule parasail_infer_cutoff:
   input: real="results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~real/{BC}_stats/alignment_score.txt",
          random="results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/alignment~random/{BC}_stats/alignment_score.txt"
   output: score_plot="results/plots/alignment/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}/alignment_score.pdf",
-          cutoff="results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}_stats/cutoff.txt"
+          cutoff="results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}_stats/cutoff.tsv"
+  # use one global precision target, then compute one cutoff per exact trna name.
+  # this keeps the cutoff table directly aligned with observed references.
   params: precision=config["alignment"]["precision"]
   log: "logs/parasail/infer_cutoff/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}.log"
   conda: "qutrna2"
+
   shell: """
-    Rscript --vanilla {workflow.basedir}/scripts/alignment_score_cutoff.R \
-      -S {output.score_plot:q} \
-      -C {output.cutoff:q} \
-      -p {params.precision:q} \
-      --real {input.real:q} --random {input.random:q} 2> {log:q}
+    python {workflow.basedir}/scripts/aln_score_cutoff_trna.py \
+    --real {input.real:q} --random {input.random:q} \
+    --precision {params.precision:q} \
+    --score-plot {output.score_plot:q} \
+    --output {output.cutoff:q} 2> {log:q}
   """

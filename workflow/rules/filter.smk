@@ -86,9 +86,10 @@ class FilterRandomAlignment(Filter):
       use_temp=False)
 
   def _process(self):
-    self.input["cutoff"] = "results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}_stats/cutoff.txt"
+    self.input["cutoff"] = "results/bam/mapped/sample~{SAMPLE}/subsample~{SUBSAMPLE}/{BC}_stats/cutoff.tsv"
+    self.params["min_as"] = self.config["min_aln_score"]
     self.cmds.append(
-      f"python {workflow.basedir}/scripts/bam_utils.py filter --min-as `sed -n '2p' {{input.cutoff:q}}` --output {{output.bam:q}} {{input.bam:q}}")
+      f"python {workflow.basedir}/scripts/bam_utils.py filter --cutoffs {{input.cutoff:q}} --min-as {{params.min_as}} --output {{output.bam:q}} {{input.bam:q}}")
 
     return True
 
