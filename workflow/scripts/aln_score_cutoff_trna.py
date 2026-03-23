@@ -122,7 +122,6 @@ def main() -> None:
     parser.add_argument("--real", required=True, type=Path, help="pos table: trna/alignment_score/count")
     parser.add_argument("--random", required=True, type=Path, help="neg table: trna/alignment_score/count")
     parser.add_argument("--precision", type=float, default=0.999, help="global precision target (0-1)")
-    parser.add_argument("--min-samples", type=int, default=20, help="skip trnas with fewer samples")
     parser.add_argument("--output", required=True, type=Path, help="output cutoff tsv (trna, cutoff)")
     parser.add_argument("--score-plot", type=Path, default=None, help="optional pdf plot")
     args = parser.parse_args()
@@ -150,10 +149,6 @@ def main() -> None:
     for trna_name in unique_trnas:
         group_scores = scores[scores["trna"] == trna_name].copy()
         total_samples = len(group_scores)
-
-        if total_samples < args.min_samples:
-            sys.stderr.write(f"skipping {trna_name}: {total_samples} samples (< {args.min_samples})\n")
-            continue
 
         cutoff = compute_cutoff(group_scores, args.precision)
         cutoff_rows.append({"trna": trna_name, "cutoff": cutoff})
