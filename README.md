@@ -4,6 +4,68 @@ Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
 If you use QutRNA2, please cite: [https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1](https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1)
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [New Features](#new-features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Conda](#environment-setup-using-conda)
+  - [Singularity / Apptainer](#using-singularity-container)
+- [Setup QutRNA2 Analysis](#setup-qutrna2-analysis)
+- [Setup Data Configuration](#setup-data-configuration)
+  - [Sprinzl](#sprinzl)
+- [Setup Analysis Configuration](#setup-analysis-configuration)
+- [Examples](#examples)
+- [Execute Workflow](#execute-workflow)
+- [Results](#results)
+  - [Alignments](#alignments)
+  - [cmalign](#cmalign)
+  - [JACUSA2](#jacusa2)
+  - [Plots](#plots)
+  - [Stats](#stats)
+  - [Secondary Structure](#secondary-structure-ss)
+
+## Quick Start
+
+This quick start guide assumes you have [conda](https://docs.conda.io/en/latest/) installed and a CUDA-capable GPU available. See [Installation](#installation) for full details and a container solution using Singularity.
+
+**1. Clone the repository:**
+```console
+git clone https://github.com/dieterich-lab/QutRNA2
+cd QutRNA2
+```
+
+**2. Install and activate the environment:**
+```console
+conda env create -f conda.yaml -n qutrna2
+conda activate qutrna2
+```
+
+**3. Copy and edit the example config files:**
+
+```console
+cp examples/analysis/map_with_gpu.yaml my_analysis.yaml
+cp examples/data/sprinzl_cm.yaml my_data.yaml
+```
+
+Edit `my_data.yaml` to point to your reference FASTA [examples](https://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/Hsapi19-seq.html), sample description TSV (labels and filepaths to basecalled samples) [example](https://github.com/dieterich-lab/QutRNA2/blob/main/examples/sample_table_fastq.tsv), and Sprinzl coordinate labels [example for eukaryotic cytosolic tRNA](https://github.com/dieterich-lab/QutRNA2/blob/main/data/nuclear-euk-masked.txt).
+Edit `my_analysis.yaml` to set paths for JACUSA2 and gpu-tRNA-mapper, and any GPU init commands.
+
+**4. Run a dry run to verify the workflow:**
+```console
+snakemake \
+    -c 1 \
+    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
+    --use-conda \
+    --configfiles my_analysis.yaml \
+    --config pepfile=my_data.yaml \
+    --directory <ANALYSIS_OUTPUT> \
+    -n
+```
+
+A list of jobs to be executed should appear. If it does without errors, remove `-n` and increase `-c` to the number of available cores to start the analysis.
+
 ## New Features
 
 QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.16](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.16/JACUSA_v2.1.16.jar) is included, featuring subsampled scores that improve the signal-to-noise ratio for identifying tRNA modifications.
@@ -11,8 +73,8 @@ QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fka
 Finally, a filter framework has been added to the analysis workflow to remove spurious alignments by applying the following filters:
 
 * Filter Random alignments
-* Adapter overlap (with 5' and 3' splint adapters)
-* Filter multimapper
+* Filter Adapter overlap (with 5' and 3' splint adapters)
+* Filter multimapping reads
 
 We added the following plots to assess the impact of filtering:
 
@@ -56,7 +118,7 @@ Finally, activate the environment:
 ```console
 conda activate qutrna2
 ```
-### Container solution using Singularity
+### Using Singularity container
 
 If Singularity/Apptainer is not already available on your system, see the [SingularityCE](https://docs.sylabs.io/guides/latest/admin-guide/installation.html) or [Apptainer](https://apptainer.org/docs/admin/latest/installation.html) installation guides.
 
