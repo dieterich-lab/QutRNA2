@@ -93,7 +93,7 @@ More customization options for heatmap plots:
 To use GPU-assisted mapping, you need a compatible NVIDIA GPU. For details, check [Hardware requirements](https://github.com/fkallen/gpu-tRNA-mapper?tab=readme-ov-file#hardware-requirements).
 In brief, a CUDA-capable GPU with Volta architecture or newer is recommended.
 
-If no compatible GPU is present, QutRNA2 can be used with [parasail](https://github.com/jeffdaily/parasail) but will run much slower.
+If no compatible GPU is present, QutRNA2 can be used with [parasail](https://github.com/jeffdaily/parasail) but will run significantly slower. See [below](#setup-analysis-configuration).
 
 ## Installation
 
@@ -122,9 +122,14 @@ conda activate qutrna2
 
 If Singularity/Apptainer is not already available on your system, see the [SingularityCE](https://docs.sylabs.io/guides/latest/admin-guide/installation.html) or [Apptainer](https://apptainer.org/docs/admin/latest/installation.html) installation guides.
 
-A Singularity definition file is provided at [`singularity/qutrna2.def`](https://github.com/dieterich-lab/QutRNA2/blob/main/singularity/qutrna2.def) to build a portable container image.
+#### Use the pre-built container image
 
-**Build the image:**
+The Zenodo link in our manuscript contains a pre-built container image. You can download it, [set up your config files](#setup-qutrna2-analysis), and run it as [instructed here](#run-using-the-container).
+
+#### Build your own container image
+
+A Singularity definition file is provided at [`singularity/qutrna2.def`](https://github.com/dieterich-lab/QutRNA2/blob/main/singularity/qutrna2.def) to build a portable container image as follows:
+
 ```console
 singularity build qutrna2.sif singularity/qutrna2.def
 ```
@@ -141,13 +146,14 @@ In summary, the sample description `<SAMPLE_DESC>` must be a TAB-separated file 
 | --------- | ----------- | -------------- | ------------ | ---------- |
 | ...       | ...         | ...            | ...          | ...        |
 
-See the files in the `QutRNA2/examples` folder for documented YAML and toy examples for sample tables. QutRNA2 distinguishes the configuration of the analysis and the data. The following analysis types are supported: 
+See the files in the `QutRNA2/examples` folder for documented YAML and toy examples for sample tables. Note that the column `base_calling` is a legacy field and should be set to `pass` for all rows.
+QutRNA2 distinguishes the configuration of the analysis and the data. The following analysis types are supported: 
 
 * map reads with gpu-tRNA-mapper (see `QutRNA2/examples/analysis/map_with_gpu.yaml`),
 * map reads with parasail (see `QutRNA2/examples/analysis/map_with_parasail.yaml`), and
 * use exisiting mapping (see `QutRNA2/examples/analysis/existing_mapping.yaml`.
 
-QutRNA2 supports the following approaches to assign Sprinzl coordinates :
+QutRNA2 supports the following approaches to assign Sprinzl coordinates and the configuration of data input differs based on it:
 
 * using a covarince model and secondary structure alignment (see `QutRNA2/examples/data/sprinzl_cm.yaml`),
 * using an existing aligned FASTA file (see `QutRNA2/examples/data/sprinzl_afasta.yaml`), or
@@ -170,7 +176,9 @@ and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_s
 It is crucial to obtain covariance models for the organism and tRNAs studied. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
 
 ## Setup analysis configuration
-Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. Add any necessary init code for the GPU and provide paths for JACUSA2 and gpu-tRNA-mapper if they are not in the standard path.
+Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. For the recommended GPU run, use `examples/analysis//map_with_gpu.yaml` as your template. Use `examples/analysis/map_with_parasail.yaml` instead as a template if you don't use GPU and would like to use parasail, but expect significantly longer runtimes.
+
+Add any necessary init code for the GPU and provide paths for JACUSA2 and gpu-tRNA-mapper if they are not in the standard path.
 
 ## Examples
 
@@ -186,21 +194,22 @@ Use `<ANALYSIS_OUTPUT>` folder to define where QutRNA2 should write the output t
 ```console
 snakemake \
     -c 1 \
-    --snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
+    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
     --use-conda \
     --configfiles <ANALYSIS_YAML> \
         --config pepfile=<DATA_YAML> \
         --directory <ANALYSIS_OUTPUT> \
-    -n 
+    -n
 ```
-You should see a list of necessary jobs to be run.
-You should increase "-c 1" to whatever suits your computing machine.
+The `-n` is to do a dry run of the pipeline. You should see a list of necessary jobs to be run and hopefully no errors.
+You should increase `-c 1` to whatever suits your computing machine.
 
-Now, you can start the analysis (remove "-n")
+if you have no errors and a clean dry run, you can start the analysis (remove `-n`):
+
 ```console
 snakemake \
     -c 1 \
-    --snakefile <QUTRNA_LOCAL_DIR>/Snakefile \
+    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
     --use-conda \
     --configfiles <ANALYSIS_YAML> \
         --config pepfile=<DATA_YAML> \
@@ -209,7 +218,7 @@ snakemake \
 
 ### Run using the container
 
-The Snakemake command is now the same as above, except it is called as part of a Singularity command:
+The Snakemake command is now the same as above but without `--use-conda`, and it is called as part of a Singularity command:
 
 ```console
 singularity run \
@@ -250,10 +259,10 @@ If a covariance model was provided in `<DATA_YAML>`, the secondary structure ali
 ### jacusa2
 The directory `<ANALYSIS_OUTPUT>/results/jacusa2` will contain JACUSA2 results for defined contrasts.
 
-## plots
-The directory `<ANALYSIS_OUTPUT>/results/plots` will contain plots.
+## Plots
+The directory `<ANALYSIS_OUTPUT>/results/plots` will contain plots. These are heatmaps of the JACUSA2 scores across tRNA positions or all tRNAs that the reads were mapped to and retained after filtering.
 
-Check `<ANALYSIS_OUTPUT>/results/plots/scores/cond1~{cond1}/cond2~{cond1}/{id}/bam~final/heatmap.pdf` for JACUAS2 score profiles after filtering. This plot concludes the analysis.
+Check `<ANALYSIS_OUTPUT>/results/plots/scores/cond1~{cond1}/cond2~{cond1}/{id}/bam~final/heatmap.pdf`. This plot concludes the analysis.
 
 ### stats
 If filters were applied, the directory `<ANALYSIS_OUTPUT>/results/stats` will contain summary statistics for features such as alignment score, read length, and read count.
