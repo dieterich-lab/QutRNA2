@@ -2,7 +2,7 @@
 
 Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
-[https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1](https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1)
+If you use QutRNA2, please cite: [https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1](https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1)
 
 ## New Features
 
@@ -35,6 +35,8 @@ If no compatible GPU is present, QutRNA2 can be used with [parasail](https://git
 
 ## Installation
 
+### Environment setup using Conda
+
 We provide a conda file with all necessary packages. 
 Clone the repository and install the requirements with [conda](https://docs.conda.io/en/latest/).
 
@@ -54,6 +56,19 @@ Finally, activate the environment:
 ```console
 conda activate qutrna2
 ```
+### Container solution using Singularity
+
+If Singularity/Apptainer is not already available on your system, see the [SingularityCE](https://docs.sylabs.io/guides/latest/admin-guide/installation.html) or [Apptainer](https://apptainer.org/docs/admin/latest/installation.html) installation guides.
+
+A Singularity definition file is provided at [`singularity/qutrna2.def`](https://github.com/dieterich-lab/QutRNA2/blob/main/singularity/qutrna2.def) to build a portable container image.
+
+**Build the image:**
+```console
+singularity build qutrna2.sif singularity/qutrna2.def
+```
+
+> Note: building a Singularity image typically requires root or `--fakeroot` privileges (e.g. `singularity build --fakeroot qutrna2.sif singularity/qutrna2.def`)
+> If building on an HPC cluster, check whether `--fakeroot` is supported.
 
 ## Setup QutRNA2 analysis
 QutRNA2 uses YAML files to define the data (data.yaml) and parametrize the analysis (analysis.yaml). Finally, a TSV file provides the sample description.
@@ -98,6 +113,8 @@ Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom
 ## Examples
 
 ## Execute workflow
+
+### Run using the Conda environment
 If not done yet, activate qutrna2 conda environment:
 ```console
 conda activate qutrna2
@@ -127,6 +144,27 @@ snakemake \
         --config pepfile=<DATA_YAML> \
         --directory <ANALYSIS_OUTPUT>
 ```
+
+### Run using the container
+
+The Snakemake command is now the same as above, except it is called as part of a Singularity command:
+
+```console
+singularity run \
+  --nv \
+  --bind <HOST_DATA_DIR>:<HOST_DATA_DIR> \
+  <PATH_TO_SIF>/qutrna2.sif \
+  snakemake \
+    --cores <N_CORES> \
+    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
+    --configfiles <ANALYSIS_YAML> \
+        --config pepfile=<DATA_YAML> \
+        --directory <ANALYSIS_OUTPUT>
+```
+
+- `singularity run --nv` enables GPU access inside the container (required for gpu-tRNA-mapper).
+- `singularity run --bind` mounts a host directory into the container so input/output paths remain accessible. Bind all directories referenced in your YAML configs or a parent directory.
+- `snakemake --executor local` is recommended when running inside a SLURM job (i.e. resource allocation is already handled by SLURM). Set `--cores` to the number of cores allocated to your job (e.g. `$SLURM_CPUS_ON_NODE`).
 
 ## Results
 When the analysis is finished, the `<ANALYSIS_OUTPUT>` directory will contain the following subdirectories:
