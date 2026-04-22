@@ -8,8 +8,11 @@ sample_table: sample_table.tsv # (required) change to the path of your sample ta
 qutrna2: # qutrna2 related options go here
   coords: sprinzl # (required) use Sprinzl position
   sprinzl:
-    # path to Sprinzl labels of the alignment consensus
+    # in CM mode provide exactly one:
+    # - labels (or label): use an existing labels file
+    # - scheme: generate labels from CM alignment using the selected scheme
     labels: data/nuclear-euk-masked.txt
+    # scheme: euk  # values: euk|arch|bact|mito
     # path to covariance model
     cm: data/TRNAinf-euk.cm
     # (optional) regular expression to ignore

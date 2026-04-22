@@ -168,10 +168,13 @@ Data for entries with the same "sample_name" will be merged - they represent tec
 Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
 
 ### Sprinzl
-For eukaryotic nuclear tRNAs, we use the following covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and labeling `data/nuclear-euk-masked.txt`.
+For eukaryotic nuclear tRNAs, we use the covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and corresponding labels in `data/nuclear-euk-masked.txt`.
 
-For human mt-tRNAs, we use the sequence to Sprinzl mapping in [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6) 
-and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`.
+**Using a covariance model:** In your data YAML, set `qutrna2.sprinzl.cm` and then provide exactly one of the following:
+- `qutrna2.sprinzl.labels` (or `qutrna2.sprinzl.label`) to use an existing labels file
+- `qutrna2.sprinzl.scheme` with one of `euk`, `arch`, `bact`, `mito` to generate labels from the CM alignment
+
+For human mt-tRNAs, use the sequence to Sprinzl mapping from [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6), available in: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`.
 
 It is crucial to obtain covariance models for the organism and tRNAs studied. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
 

@@ -45,6 +45,11 @@ properties:
             properties:
               cm:
                 type: string
+              consensus_labels:
+                type: string
+              scheme:
+                type: string
+                enum: ["euk", "arch", "bact", "mito"]
               labels:
                 type: string
               seq_to_sprinzl:

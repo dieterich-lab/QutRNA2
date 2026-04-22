@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 global create_include
 global REF_FILTERED_TRNAS_FASTA
@@ -16,11 +17,39 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   # cm -> covarince model -> calculate secondary structure alignment and create mapping
   # seq_to_sprinzl -> use exisiting mapping
   if "cm" in pep.config["qutrna2"]["sprinzl"]:
+    _SPRINZL_CFG = pep.config["qutrna2"]["sprinzl"]
     SPRINZL_LABELS = "data/sprinzl_labels.txt"
-    create_include("sprinzl_labels",
-        pep.config["qutrna2"]["sprinzl"]["labels"],
-        SPRINZL_LABELS,
-        config["include"].get("sprinzl_labels","copy"))
+    _AUTO_SPRINZL_LABELS = "results/data/sprinzl_labels_auto.txt"
+    _VALID_SCHEMES = {"euk", "arch", "bact", "mito"}
+    _HAS_SPRINZL_LABELS = "labels" in _SPRINZL_CFG
+    _HAS_SPRINZL_SCHEME = "scheme" in _SPRINZL_CFG
+
+    if _HAS_SPRINZL_LABELS and _HAS_SPRINZL_SCHEME:
+      raise ValueError(
+          "In CM mode, provide only one of qutrna2.sprinzl.scheme or qutrna2.sprinzl.labels."
+      )
+    if not _HAS_SPRINZL_LABELS and not _HAS_SPRINZL_SCHEME:
+      raise ValueError(
+          "In CM mode, you must provide one of qutrna2.sprinzl.scheme or qutrna2.sprinzl.labels."
+      )
+
+    if _HAS_SPRINZL_SCHEME:
+      _SPRINZL_SCHEME = _SPRINZL_CFG["scheme"]
+      if _SPRINZL_SCHEME not in _VALID_SCHEMES:
+        raise ValueError(
+            f"Invalid qutrna2.sprinzl.scheme='{_SPRINZL_SCHEME}'. "
+            f"Must be one of: {', '.join(sorted(_VALID_SCHEMES))}"
+        )
+
+    if _HAS_SPRINZL_LABELS:
+      create_include("sprinzl_labels",
+          _SPRINZL_CFG["labels"],
+          SPRINZL_LABELS,
+          config["include"].get("sprinzl_labels", "copy"))
+    else:
+      SPRINZL_LABELS = _AUTO_SPRINZL_LABELS
+      # Ensure results/data directory exists for auto-generated labels
+      os.makedirs(os.path.dirname(_AUTO_SPRINZL_LABELS), exist_ok=True)
 
     SPRINZL_MODE = "cm"
     # covariance model destination
@@ -61,6 +90,23 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
           {input.stk:q} \
           2> {log:q}
       """
+
+    if _HAS_SPRINZL_SCHEME:
+      rule ss_auto_sprinzl_labels:
+        input: stk="results/cmalign/align.stk"
+        output: SPRINZL_LABELS
+        log: "logs/ss/auto_sprinzl_labels.log"
+        params: scheme=_SPRINZL_SCHEME
+        shell: """
+          set -e
+          echo "Generating Sprinzl labels: scheme={params.scheme}" >> {log:q}
+          python {workflow.basedir}/scripts/sprinzl_utils.py auto-labels \
+            --output {output:q} \
+            --scheme {params.scheme:q} \
+            {input.stk:q} \
+            2>> {log:q} || (echo "FAILED to auto-generate labels. Check log above." >> {log:q} && exit 1)
+          echo "Labels generated successfully: $(wc -l < {output:q}) labels written" >> {log:q}
+        """
 
     rule ss_create_consensus_label:
       input: stk="results/cmalign/align.stk",
