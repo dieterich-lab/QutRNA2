@@ -6,14 +6,26 @@ inputs are binned count tables from:
   bam_utils.py count-trna-wise-tag -t AS -c alignment_score
 
 output is a tsv consumed by bam_utils.py filter --cutoffs with columns:
-  trna    cutoff
+  trna    cutoff    cutoff_scope    n_real    n_random    reason
+
+every observed trna gets exactly one row:
+- cutoff_scope is "trna_specific" if the trna had enough observations
+  (>= ceil(1 / (1 - precision))) to calibrate its own cutoff, else "pooled" -
+  the row's cutoff falls back to the one cutoff computed from every trna's
+  real+random scores pooled together (also present as its own row, trna
+  = POOLED_SUMMARY_TRNA).
+- reason is always one of: "precision_met", "insufficient_observations"
+  (too few observations, cutoff_scope is "pooled"), "precision_unreachable"
+  (enough observations, but no threshold reached target precision even so;
+  cutoff falls back to the strictest observed score for that group).
 
 notes:
 - `trna` is an exact reference name from the score tables.
-- this script does not build regex groups; every observed trna gets its own cutoff.
+- this script does not build regex groups; every observed trna gets its own row.
 """
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -22,6 +34,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import precision_recall_curve
+
+# Random-alignment references are generated from reversed sequences, so their
+# names carry this suffix; strip it to line NEG rows up with the matching POS trna.
+RANDOM_ALIGNMENT_SUFFIX = "_rev"
+
+# Sentinel trna name for the one row summarizing the pooled-global cutoff.
+# No real reference is expected to collide with this name.
+POOLED_SUMMARY_TRNA = "__pooled__"
 
 
 def load_tsv_expand(tsv_file: Path, category: str) -> pd.DataFrame:
@@ -43,8 +63,9 @@ def load_tsv_expand(tsv_file: Path, category: str) -> pd.DataFrame:
         sys.exit(1)
 
 
-def compute_cutoff(group_scores: pd.DataFrame, target_precision: float) -> float:
-    """Return the lowest alignment score reaching target precision."""
+def compute_cutoff(group_scores: pd.DataFrame, target_precision: float) -> tuple[float, bool]:
+    """Return (cutoff, precision_reached): the lowest alignment score reaching
+    target precision, and whether that target was actually reachable."""
     # Precision-recall is computed on binary labels where POS are real alignments.
     y_true = (group_scores["category"] == "POS").astype(int).to_numpy()
     y_score = group_scores["alignment_score"].to_numpy()
@@ -60,10 +81,10 @@ def compute_cutoff(group_scores: pd.DataFrame, target_precision: float) -> float
         sys.stderr.write(
             f"Warning: cannot reach precision {target_precision:.3f}; using max score {cutoff:.1f}\n"
         )
-        return cutoff
+        return cutoff, False
 
     idx = int(np.argmax(mask))
-    return float(thresh[idx])
+    return float(thresh[idx]), True
 
 
 
@@ -126,43 +147,88 @@ def main() -> None:
     parser.add_argument("--score-plot", type=Path, default=None, help="optional pdf plot")
     args = parser.parse_args()
 
-    if not (0.0 < args.precision <= 1.0):
-        sys.stderr.write("error: --precision must be in (0, 1].\n")
+    if not (0.0 < args.precision < 1.0):
+        sys.stderr.write("error: --precision must be in (0, 1).\n")
         sys.exit(1)
+
+    # a trna needs enough observations that seeing zero errors is itself evidence
+    # of the target precision, not just a too-small sample getting lucky.
+    min_aln_count = math.ceil(1 / (1 - args.precision))
 
     # combine real and random scores with explicit labels used by pr computation.
     real_df = load_tsv_expand(args.real, "POS")
     rand_df = load_tsv_expand(args.random, "NEG")
 
-    # random alignments are reversed sequences, so reference names carry a '_rev' suffix.
-    # strip it so NEG and POS rows from the same trna fall into the same group.
-    rand_df["trna"] = rand_df["trna"].str.replace(r"_rev$", "", regex=True)
+    # strip the random-alignment suffix so NEG and POS rows from the same trna
+    # fall into the same group.
+    rand_df["trna"] = rand_df["trna"].str.replace(f"{RANDOM_ALIGNMENT_SUFFIX}$", "", regex=True)
 
     scores = pd.concat([real_df, rand_df], ignore_index=True)
+    if scores.empty:
+        sys.stderr.write("error: no alignment score observations in --real/--random\n")
+        sys.exit(1)
 
-    # use all unique observed trna names directly, with one cutoff per exact name.
-    unique_trnas = sorted(scores["trna"].dropna().unique().tolist())
+    # pooled cutoff from every trna's real+random scores combined, used as the
+    # fallback cutoff for trnas without enough observations of their own.
+    pooled_cutoff, pooled_reached = compute_cutoff(scores, args.precision)
+    pooled_reason = "precision_met" if pooled_reached else "precision_unreachable"
+    pooled_n_real = int((scores["category"] == "POS").sum())
+    pooled_n_random = int((scores["category"] == "NEG").sum())
+    sys.stderr.write(
+        f"pooled: cutoff={pooled_cutoff:.1f} "
+        f"(N_real={pooled_n_real}, N_random={pooled_n_random}, {pooled_reason})\n"
+    )
 
-    cutoff_rows: list[dict[str, float | str]] = []
+    cutoff_rows: list[dict[str, float | str | int]] = [{
+        "trna": POOLED_SUMMARY_TRNA,
+        "cutoff": pooled_cutoff,
+        "cutoff_scope": "pooled",
+        "n_real": pooled_n_real,
+        "n_random": pooled_n_random,
+        "reason": pooled_reason,
+    }]
     plot_rows: list[pd.DataFrame] = []
+
+    # use all unique observed trna names directly, with one row per exact name.
+    unique_trnas = sorted(scores["trna"].dropna().unique().tolist())
 
     for trna_name in unique_trnas:
         group_scores = scores[scores["trna"] == trna_name].copy()
-        total_samples = len(group_scores)
+        n_real = int((group_scores["category"] == "POS").sum())
+        n_random = int((group_scores["category"] == "NEG").sum())
 
-        cutoff = compute_cutoff(group_scores, args.precision)
-        cutoff_rows.append({"trna": trna_name, "cutoff": cutoff})
-        sys.stderr.write(f"{trna_name}: cutoff={cutoff:.1f} (N={total_samples})\n")
+        if n_real + n_random < min_aln_count:
+            cutoff_rows.append({
+                "trna": trna_name,
+                "cutoff": pooled_cutoff,
+                "cutoff_scope": "pooled",
+                "n_real": n_real,
+                "n_random": n_random,
+                "reason": "insufficient_observations",
+            })
+            sys.stderr.write(
+                f"{trna_name}: {n_real + n_random} observations "
+                f"(< {min_aln_count} needed for precision {args.precision:.3f}), using pooled cutoff\n"
+            )
+            continue
+
+        cutoff, precision_reached = compute_cutoff(group_scores, args.precision)
+        reason = "precision_met" if precision_reached else "precision_unreachable"
+        cutoff_rows.append({
+            "trna": trna_name,
+            "cutoff": cutoff,
+            "cutoff_scope": "trna_specific",
+            "n_real": n_real,
+            "n_random": n_random,
+            "reason": reason,
+        })
+        sys.stderr.write(f"{trna_name}: cutoff={cutoff:.1f} (N_real={n_real}, N_random={n_random}, {reason})\n")
 
         if args.score_plot is not None:
             # keep compact plotting fields so the plot phase stays simple.
             group_scores["group"] = trna_name
             group_scores["cutoff"] = cutoff
             plot_rows.append(group_scores[["alignment_score", "category", "group", "cutoff"]])
-
-    if not cutoff_rows:
-        sys.stderr.write("error: no cutoffs computed\n")
-        sys.exit(1)
 
     # keep output schema compatible with bam_utils.py filter loader.
     pd.DataFrame(cutoff_rows).to_csv(args.output, sep="\t", index=False)

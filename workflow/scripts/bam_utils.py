@@ -500,10 +500,14 @@ def filter(bam,
 
     # load exact per-trna cutoffs from table for fast direct lookup.
     # we intentionally key by exact reference name instead of regex matching.
+    # "__pooled__" is aln_score_cutoff_trna.py's summary row for its pooled-global
+    # cutoff, not a real reference name - skip it here.
     cutoff_by_trna = {}
     if cutoffs:
         cutoff_df = pd.read_csv(cutoffs, sep="\t")
         for _, row in cutoff_df.iterrows():
+            if row["trna"] == "__pooled__":
+                continue
             cutoff_by_trna[str(row["trna"])] = int(row["cutoff"])
         sys.stderr.write(f"loaded {len(cutoff_by_trna)} cutoffs from {cutoffs}\n")
 

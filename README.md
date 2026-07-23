@@ -10,9 +10,9 @@ QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fka
 
 Finally, a filter framework has been added to the analysis workflow to remove spurious alignments by applying the following filters:
 
-* Filter Random alignments
-* Adapter overlap (with 5' and 3' splint adapters)
-* Filter multimapper
+* Filter Random alignments: keep only reads that align significantly better to the real tRNA than to a randomized decoy version of it
+* Adapter overlap: keep only reads whose alignment sufficiently spans the 5' and 3' splint adapters
+* Filter multimapper: remove reads with more than one reported alignment
 
 We added the following plots to assess the impact of filtering:
 

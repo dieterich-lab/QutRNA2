@@ -63,11 +63,15 @@ properties:
     properties:
       precision:
         type: number
-        description: Calibrate alignment score offset with precision
+        description: >-
+          Target precision for the per-tRNA and pooled-global alignment score
+          cutoffs. Also determines the minimum observations
+          (ceil(1 / (1 - precision))) a tRNA needs before it gets its own cutoff;
+          below that it falls back to the pooled-global cutoff
         default: 0.999
       min_aln_score:
         type: integer
-        description: Minimum alignment score to considert for calibration
+        description: Minimum alignment score to consider when selecting a read's best alignment
         default: 10
       random:
         type: string
