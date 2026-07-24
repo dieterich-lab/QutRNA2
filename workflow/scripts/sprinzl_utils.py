@@ -106,22 +106,23 @@ def _column_has_residue(align, col_idx):
     return residue_count > 0
 
 
-def _available_label_columns(align, ss):
-    return [
-        i
-        for i, ss_char in enumerate(ss)
-        if _is_label_column(ss_char) and _column_has_residue(align, i)
-    ]
-
-
 def _labels_from_scheme_and_alignment(align, ss, scheme_labels):
+    # positional zip: label_columns[i] gets scheme_labels[i], in order. this only
+    # produces correct labels when a real deficit (fewer structural columns than
+    # scheme_labels) falls at the tail of the scheme (e.g. the CCA end, which some
+    # CMs don't model at all, since it's added post-transcriptionally, not
+    # genomically encoded). a deficit anywhere else - any CM whose modeled column
+    # count varies by isotype, such as tRNAscan-SE's per-isotype CMs - silently
+    # shifts every downstream label with no error. this is not caught here, and
+    # can't be caught by any column-count check alone: it needs to know which
+    # named Sprinzl position each real column represents, which requires
+    # structural (stem/loop-aware) labeling, not a fixed position list.
     label_columns = [i for i, ss_char in enumerate(ss) if _is_label_column(ss_char)]
     if len(label_columns) > len(scheme_labels):
         raise ValueError(
             f"Scheme has {len(scheme_labels)} labels but alignment needs {len(label_columns)} label columns."
         )
 
-    available_label_columns = set(_available_label_columns(align, ss))
     labels = []
     for label_idx, col_idx in enumerate(label_columns):
         label = _normalize_sprinzl_label(scheme_labels[label_idx])
@@ -129,18 +130,6 @@ def _labels_from_scheme_and_alignment(align, ss, scheme_labels):
             labels.append(label)
         else:
             labels.append("-")
-
-    labeled_available_columns = [
-        col_idx
-        for col_idx, label in zip(label_columns, labels)
-        if col_idx in available_label_columns and label != "-"
-    ]
-    if len(labeled_available_columns) != len(available_label_columns):
-        missing_columns = sorted(available_label_columns.difference(labeled_available_columns))
-        raise ValueError(
-            "Auto-label generation failed: some biologically available label columns were not assigned "
-            f"a Sprinzl label ({missing_columns})."
-        )
 
     return labels
 
