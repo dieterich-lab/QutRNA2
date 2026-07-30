@@ -50,6 +50,20 @@ properties:
               scheme:
                 type: string
                 enum: ["euk", "arch", "bact", "mito"]
+              mito:
+                type: object
+                properties:
+                  canonical_cm:
+                    type: array
+                    items:
+                      type: string
+                  armless_cm_dir:
+                    type: string
+              cyto:
+                type: object
+                properties:
+                  cyto_cm_db:
+                    type: string
               labels:
                 type: string
               seq_to_sprinzl:

@@ -8,9 +8,9 @@ sample_table: sample_table.tsv # (required) change to the path of your sample ta
 qutrna2: # qutrna2 related options go here
   coords: sprinzl # (required) use Sprinzl position
   sprinzl:
-    # path to Sprinzl labels of the alignment consensus
-    labels: data/human_mt_sprinzl_labels.txt
     seq_to_sprinzl: human_mt_seq_to_sprinzl.tsv
+    # (optional) override which Sprinzl labels get plotted, '-' to drop any
+    # labels: data/human_mt_sprinzl_labels.txt
     # (optional) regular expression to ignore
     # sequence IDs for Sprinzl transformation
     ignore_trnas: ^MT

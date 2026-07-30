@@ -1,5 +1,9 @@
+import csv
 import os
 import logging
+import re
+from collections import defaultdict
+
 import click
 import pandas as pd
 import pysam
@@ -27,61 +31,30 @@ def write_fasta_records(records, fname):
             f.write(f"{record.seq}\n")
 
 
-# FIXME
-
-# Organism/model-specific Sprinzl schemes (from tDRnamer tdrdbutils.py).
-# Labels are used in order for non-gap consensus structure columns.
-SPRINZL_SCHEMES = {
-    "euk": [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-        "17", "17a", "18", "19", "20", "20a", "20b", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-        "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45",
-        "e11", "e12", "e13", "e14", "e15", "e16", "e17", "e1", "e2", "e3", "e4", "e5",
-        "e27", "e26", "e25", "e24", "e23", "e22", "e21",
-        "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62",
-        "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76"
-    ],
-    "arch": [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-        "17", "17a", "18", "19", "20", "20a", "20b", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-        "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45",
-        "e11", "e12", "e13", "e14", "e15", "e16", "e17", "e1", "e2", "e3", "e4",
-        "e27", "e26", "e25", "e24", "e23", "e22", "e21",
-        "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62",
-        "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76"
-    ],
-    "bact": [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16",
-        "17", "17a", "18", "19", "20", "20a", "20b", "21", "22", "23", "24", "25", "26", "27", "28", "29",
-        "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45",
-        "e11", "e12", "e13", "e14", "e15", "e16", "e17", "e1", "e2", "e3", "e4",
-        "e27", "e26", "e25", "e24", "e23", "e22", "e21",
-        "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62",
-        "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76"
-    ],
-    "mito": [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19",
-        "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37",
-        "38", "39", "40", "41", "42", "43", "44", "45",
-        "e11", "e12", "e13", "e14", "e15", "e16", "e17", "e1", "e2", "e3", "e4",
-        "e27", "e26", "e25", "e24", "e23", "e22", "e21",
-        "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64",
-        "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76"
-    ]
-}
-
-
-def _is_label_column(ss_char):
-    return ss_char != "."
-
-
-def _normalize_sprinzl_label(label):
-    s = str(label)
-    if s.startswith("e"):
-        return s
-    if len(s) > 1 and s[-1].isalpha():
-        return f"{s[:-1]}{s[-1].upper()}"
-    return s
+def _label_sort_key(label):
+    """sort key placing every label in true 5'->3' Sprinzl order.
+    plain numeric labels (with optional letter-suffix overflow, e.g. '60A')
+    sort by (number, suffix length, suffix): suffix length before suffix
+    itself so a single-letter overflow (Z) sorts before the two-letter
+    overflow that follows it (AA), which plain string comparison gets wrong.
+    variable-arm 'e' labels (class-ii: Leu, Ser) sit strictly between 45 and
+    46: e11-e17 (5' stem) first, then e1-e5 (loop), then e21-e27 (3' stem),
+    but the 3' stem is numbered in REVERSE as you read it 5'->3' (e27
+    comes before e21), so its sort order needs the digit negated or e27
+    would wrongly sort after e21."""
+    m = re.match(r"e(\d)(\d)?([A-Za-z]*)$", label)
+    if m:
+        d1, d2, suffix = m.group(1), m.group(2), m.group(3)
+        if d2 is None:
+            rank, order = 1, int(d1)      # e1..e5: loop
+        elif d1 == "1":
+            rank, order = 0, int(d2)      # e11..e17: 5' stem
+        else:
+            rank, order = 2, -int(d2)     # e21..e27: 3' stem, reverse order
+        return (45, 1, rank, order, len(suffix), suffix)
+    m = re.match(r"(\d+)([A-Za-z]*)", label)
+    num, suffix = m.group(1), m.group(2)
+    return (int(num), 0, 0, 0, len(suffix), suffix)
 
 
 def _column_has_residue(align, col_idx):
@@ -106,80 +79,83 @@ def _column_has_residue(align, col_idx):
     return residue_count > 0
 
 
-def _labels_from_scheme_and_alignment(align, ss, scheme_labels):
-    # positional zip: label_columns[i] gets scheme_labels[i], in order. this only
-    # produces correct labels when a real deficit (fewer structural columns than
-    # scheme_labels) falls at the tail of the scheme (e.g. the CCA end, which some
-    # CMs don't model at all, since it's added post-transcriptionally, not
-    # genomically encoded). a deficit anywhere else - any CM whose modeled column
-    # count varies by isotype, such as tRNAscan-SE's per-isotype CMs - silently
-    # shifts every downstream label with no error. this is not caught here, and
-    # can't be caught by any column-count check alone: it needs to know which
-    # named Sprinzl position each real column represents, which requires
-    # structural (stem/loop-aware) labeling, not a fixed position list.
-    label_columns = [i for i, ss_char in enumerate(ss) if _is_label_column(ss_char)]
-    if len(label_columns) > len(scheme_labels):
+@cli.command("check-sprinx-headers")
+@click.argument("fasta", type=click.Path(exists=True))
+def check_sprinx_headers(fasta):
+    """Fail fast if any header in FASTA can't be parsed for anticodon/aa by
+    sprinx, rather than letting the whole sprinx run degrade silently."""
+    from Bio import SeqIO
+    from sprinx.common import header_to_aa, header_to_anticodon
+
+    bad = []
+    for record in SeqIO.parse(fasta, "fasta"):
+        header = record.description
+        if header_to_anticodon(header) is None or header_to_aa(header) is None:
+            bad.append(record.id)
+
+    if bad:
         raise ValueError(
-            f"Scheme has {len(scheme_labels)} labels but alignment needs {len(label_columns)} label columns."
+            f"{len(bad)} record(s) in {fasta} have a header sprinx can't parse "
+            f"for anticodon/aa (expected 'id|aa|anticodon|taxon', an "
+            f"'anticodon=XXX' tag, or a GtRNAdb-style 'tRNA-{{AA}}-{{anticodon}}' "
+            f"name): {', '.join(bad[:10])}"
+            + (f", and {len(bad) - 10} more" if len(bad) > 10 else "")
         )
 
-    labels = []
-    for label_idx, col_idx in enumerate(label_columns):
-        label = _normalize_sprinzl_label(scheme_labels[label_idx])
-        if _column_has_residue(align, col_idx):
-            labels.append(label)
-        else:
-            labels.append("-")
 
-    return labels
+@cli.command("sprinx-to-seq-to-sprinzl")
+@click.option("--output", required=True, help="Output FNAME (seq_to_sprinzl.tsv)")
+@click.argument("sprinx_tsv", type=click.Path(exists=True))
+def sprinx_to_seq_to_sprinzl(sprinx_tsv, output):
+    """Convert sprinx's per-position sprinzl_mapping.tsv into the id/seq_pos/sprinzl
+    format expected by ss_seq_to_sprinzl_final/ss_transform."""
+    by_id = defaultdict(dict)   # seq_id -> {label: seq_pos}
+    order = []                  # seq_id in order of first appearance
+    labels = set()
 
-@cli.command()
-@click.option("--output", required=True, help="Output labels file.")
-@click.option(
-    "--scheme",
-    required=True,
-    type=click.Choice(["euk", "arch", "bact", "mito"], case_sensitive=False),
-    help="Sprinzl scheme: euk|arch|bact|mito",
-)
-@click.option("--debug", is_flag=True, help="Enable debug logging for residue checks.")
-@click.argument("stk", type=click.Path(exists=True))
-def auto_labels(stk, output, scheme, debug):
-    """Generate Sprinzl labels from CM alignment consensus structure."""
-    if debug:
-        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s:%(name)s:%(message)s")
+    with open(sprinx_tsv, newline="") as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            label = row["sprinzl_position"].strip()
+            if not label:            # unlabeled position; nothing to map
+                continue
+            seq_id = row["seq_id"]
+            if seq_id not in by_id:
+                order.append(seq_id)
+            # qutrna2 convention: 17A/20A/20B, not 17a/20a/20b; variable-arm
+            # 'e' labels (e11, e21, ...) keep their lowercase 'e'.
+            if not label.startswith(("e", "E")):
+                label = label.upper()
+            by_id[seq_id][label] = int(row["seq_index"]) + 1   # 1-indexed seq_pos
+            labels.add(label)
 
-    try:
-        align = AlignIO.read(stk, "stockholm")
-    except Exception as e:
-        raise IOError(f"Failed to read alignment from {stk}: {e}") from e
+    ordered_labels = sorted(labels, key=_label_sort_key)
 
-    if "secondary_structure" not in align.column_annotations:
-        raise ValueError(f"{stk}: missing secondary_structure annotation (invalid cmalign output?)")
-
-    ss = str(align.column_annotations["secondary_structure"])
-    selected_scheme = scheme.lower()
-
-    if selected_scheme not in SPRINZL_SCHEMES:
-        raise ValueError(
-            f"Invalid Sprinzl scheme '{scheme}'. "
-            "Specify one of: euk, arch, bact, mito."
-        )
-    labels = _labels_from_scheme_and_alignment(align, ss, SPRINZL_SCHEMES[selected_scheme])
-    required = sum(1 for c in ss if _is_label_column(c))
-    if len(labels) != required:
-        raise ValueError(
-        f"Auto-label generation failed: generated {len(labels)} labels "
-        f"for {required} label columns."
-        )
-
-    # Write labels
     os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
-    try:
-        with open(output, "w", encoding="utf-8") as f:
-            for label in labels:
-                f.write(f"{label}\n")
-    except Exception as e:
-        raise IOError(f"Failed to write {output}: {e}") from e
+    with open(output, "w", newline="") as f:
+        w = csv.writer(f, delimiter="\t", lineterminator="\n")
+        w.writerow(["id", "seq_pos", "sprinzl"])
+        for seq_id in order:
+            positions = by_id[seq_id]
+            for label in ordered_labels:
+                w.writerow([seq_id, positions.get(label, "-"), label])
+
+@cli.command("derive-sprinzl-labels")
+@click.option("--output", required=True, help="Output FNAME (plain ordered label list)")
+@click.argument("seq_to_sprinzl", type=click.Path(exists=True))
+def derive_sprinzl_labels(seq_to_sprinzl, output):
+    """Derive the flat, ordered Sprinzl label list plot_heatmap.R expects for
+    --sprinzl from the union of labels present in a seq_to_sprinzl
+    TSV, so modes that produce that TSV directly don't need a separately
+    maintained labels file."""
+    df = pd.read_csv(seq_to_sprinzl, sep="\t")
+    labels = {label for label in df["sprinzl"].astype(str) if label not in ("-", ".")}
+    ordered = sorted(labels, key=_label_sort_key)
+
+    os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
+    with open(output, "w") as f:
+        for label in ordered:
+            f.write(f"{label}\n")
+
 
 @cli.command()
 @click.option("--output", required=True, help="Output for aligned FASTA")

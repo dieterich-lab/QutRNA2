@@ -1,0 +1,40 @@
+# Template for a data pep file that specifies details about the data.
+# The following template uses sprinx to automatically assign Sprinzl coordinates.
+
+pep_version: 2.0.0 # (required) This defines the version of the pep file
+sample_table: sample_table.tsv # (required) change to the path of your sample table file
+
+
+qutrna2: # qutrna2 related options go here
+  coords: sprinzl # (required) use Sprinzl position
+  sprinzl:
+    scheme: mito # (required) possible values: euk|arch|bact|mito
+    # (optional) override which Sprinzl labels get plotted, '-' to drop one
+    # labels: data/human_mt_sprinzl_labels.txt
+    # (optional) regular expression to ignore sequence IDs for Sprinzl
+    # transformation. Not set here: scheme=mito is meant to label mt-tRNAs
+    # themselves, so ignore_trnas: ^MT would exclude the very tRNAs this
+    # scheme is for.
+    # ignore_trnas: ^MT
+
+    # Everything below is optional and only needed to override sprinx's
+    # bundled default CM sources.
+    # mito: # scheme=mito only
+    #   canonical_cm: # tried in order per sequence
+    #     - src/sprinx/data/mito_cm/canonical/TRNAinf-bact.cm
+    #     - data/mito/TRNAinf-euk.cm
+    #     - src/sprinx/data/mito_cm/canonical/mitofinder_models
+    #   armless_cm_dir: src/sprinx/data/mito_cm/armless
+    # cyto: # scheme=euk|arch|bact only
+    #   cyto_cm_db: data/my_cyto_cm_db.cm
+  ref_fasta:
+    file: reference.fasta # (required) change to path of reference fasta
+    # headers must carry each tRNA's anticodon and amino acid: id|aa|anticodon|taxon,
+    # an anticodon=XXX tag, or a GtRNAdb-style tRNA-{AA}-{anticodon} name
+  linker5: 24 # 5' linker length
+  linker3: 32 # 3' linker length
+  contrasts: # define multiple contrasts if desired. Make sure that conditions are from the "condition" column in the sample table.
+    - cond1: conditionA # name of 1st condition (make sure this is a value from column "condition" in sample_table)
+      cond2: conditionB # name of 2nd condition (make sure this is a value from column "condition" in sample_table)
+    - cond1: conditionA
+      cond2: condition

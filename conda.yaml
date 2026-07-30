@@ -33,4 +33,9 @@ dependencies:
   - samtools
   - snakemake=9.8
   - snakemake-executor-plugin-slurm
+  - viennarna
+  - forgi
+  - pip
+  - pip:
+    - git+https://github.com/dieterich-lab/sprinx.git
 prefix: /home/mpiechotta/miniconda3/envs/qutrna2

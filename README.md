@@ -155,7 +155,8 @@ QutRNA2 distinguishes the configuration of the analysis and the data. The follow
 
 QutRNA2 supports the following approaches to assign Sprinzl coordinates and the configuration of data input differs based on it:
 
-* using a covarince model and secondary structure alignment (see `QutRNA2/examples/data/sprinzl_cm.yaml`),
+* automatic labeling via [sprinx](https://github.com/dieterich-lab/sprinx) (see `QutRNA2/examples/data/data_auto.yaml`, recommended),
+* using your own covariance model and secondary structure alignment (see `QutRNA2/examples/data/sprinzl_cm.yaml`),
 * using an existing aligned FASTA file (see `QutRNA2/examples/data/sprinzl_afasta.yaml`), or
 * a direct mapping of sequence to Sprinzl coordinates (see `QutRNA2/examples/data/seq_to_sprinzl.yaml`)).
 
@@ -168,15 +169,21 @@ Data for entries with the same "sample_name" will be merged - they represent tec
 Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
 
 ### Sprinzl
-For eukaryotic nuclear tRNAs, we use the covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and corresponding labels in `data/nuclear-euk-masked.txt`.
 
-**Using a covariance model:** In your data YAML, set `qutrna2.sprinzl.cm` and then provide exactly one of the following:
-- `qutrna2.sprinzl.labels` (or `qutrna2.sprinzl.label`) to use an existing labels file
-- `qutrna2.sprinzl.scheme` with one of `euk`, `arch`, `bact`, `mito` to generate labels from the CM alignment
+**Automatic labeling (recommended):** in your data YAML, set `qutrna2.sprinzl.scheme` to one of `euk`, `arch`, `bact`, `mito`, matching your tRNAs. [sprinx](https://github.com/dieterich-lab/sprinx) then picks a covariance model, aligns your tRNAs against it, and assigns each Sprinzl position from the resulting structure. See `examples/data/data_auto.yaml` for a template.
 
-For human mt-tRNAs, use the sequence to Sprinzl mapping from [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6), available in: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`.
+- `mito` accounts for tRNAs that may have lost an arm (common in some mitochondrial genomes): it tries several CMs and diagnoses arm loss rather than assuming a cloverleaf structure. `euk`/`arch`/`bact` assume no arm loss and select from a combined CM database instead.
+- sprinx ships with default CMs for each scheme; override them with `qutrna2.sprinzl.mito.canonical_cm` (a list) and `qutrna2.sprinzl.mito.armless_cm_dir` for `scheme: mito`, or `qutrna2.sprinzl.cyto.cyto_cm_db` for `scheme: euk`/`arch`/`bact`.
+- your reference FASTA headers need to carry each tRNA's anticodon and amino acid somewhere sprinx can find it: as `id|aa|anticodon|taxon`, an `anticodon=XXX` tag, or a GtRNAdb-style name like `tRNA-Ala-TGC`. The pipeline checks every header against this before doing any work, and reports exactly which records don't match.
+- which Sprinzl labels get plotted, and in what order, is derived from the labels sprinx assigns. Set `qutrna2.sprinzl.labels` to override this list yourself, e.g. to drop a position from the heatmap by setting it to `-`.
 
-It is crucial to obtain covariance models for the organism and tRNAs studied. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
+**Manual / precomputed:** In the QutRNA2 publication, for eukaryotic nuclear tRNAs, we used the covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and corresponding labels in `data/nuclear-euk-masked.txt`. To use this approach yourself, set `qutrna2.sprinzl.cm` together with `qutrna2.sprinzl.labels` (or `qutrna2.sprinzl.label`) to supply your own CM and a Sprinzl labels file. 
+The latter is required in this mode of running QutRNA2.
+
+For human mt-tRNAs, use the sequence to Sprinzl mapping from [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6), available in `data/human_mt_seq_to_sprinzl.tsv` (`data/human_mt_sprinzl_labels.txt` is an optional override for which labels are plotted).
+
+It is crucial to obtain covariance models for the organism and tRNAs studied, if you'd like to use the
+manual approach. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
 
 ## Setup analysis configuration
 Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. For the recommended GPU run, use `examples/analysis//map_with_gpu.yaml` as your template. Use `examples/analysis/map_with_parasail.yaml` instead as a template if you don't use GPU and would like to use parasail, but expect significantly longer runtimes.
