@@ -33,6 +33,7 @@ dependencies:
   - samtools
   - snakemake=9.8
   - snakemake-executor-plugin-slurm
+  - pytest
   - viennarna
   - forgi
   - pip
