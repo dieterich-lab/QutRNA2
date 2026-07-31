@@ -33,6 +33,7 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   include: "rules/sec_structure.smk"
 include: "rules/plot.smk"
 include: "rules/info.smk"
+include: "rules/report.smk"
 
 ruleorder: fastq_read_count > samtools_record_count
 ruleorder: fastq_read_length > samtools_read_length
@@ -89,6 +90,10 @@ def target_all():
 
 rule all:
   input: lambda wildcards: target_all() + target_info()
+
+
+rule report:
+  input: "results/report/report.html"
 
 ########################################################################################################################
 

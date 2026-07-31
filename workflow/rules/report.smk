@@ -1,54 +1,25 @@
+import glob
+import importlib.metadata
+import json
 import os
+import re
+import shutil
+import subprocess
 
 import pandas as pd
-from snakemake.io import temp, unpack
-import re
-import subprocess
 import yaml
 
 
 rule report_render:
-  input: report="results/report/report.Rmd",
-         preprocessing="results/report/preprocessing.Rmd",
-         results="results/report/results.Rmd",
-         data_config="results/report/data_config.Rmd",
-         params="results/report/params.yaml"
+  input: params="results/report/params.yaml",
+         template=f"{workflow.basedir}/report/report.html.jinja"
   output: "results/report/report.html"
   log: "logs/report/render.log"
-  shell: """
-    mkdir -p results/report
-    Rscript {workflow.basedir}/scripts/report_render.R \
-      --params {input.params:q} \
-      --format html_document \
-      {input.report:q} \
-      > {output:q} \
-      2> {log:q}
-  """
-
-
-def _report_parse_template(wildcards):
-  d = {
-    "params": "results/report/params.yaml",
-    "template": f"{workflow.basedir}/report/{{template}}.jinja"
-  }
-  if wildcards.template != "report":
-    d["template"] = temp(d["template"])
-
-  # TODO add dependency
-
-  return d
-
-
-rule report_parse_template:
-  input: unpack(_report_parse_template)
-  output: "results/report/{template}.Rmd"
-  log: "logs/report_parse_template/{template}.log"
   conda: "qutrna2"
   shell: """
-    mkdir -p results/report
-    python {workflow.basedir}/scripts/report_parse_template.py \
-      --output {output:q} \
+    python {workflow.basedir}/scripts/report_render.py \
       --params {input.params:q} \
+      --output {output:q} \
       {input.template:q} \
       2> {log:q}
   """
@@ -62,8 +33,8 @@ def _report_create_params(wildcards):
   for fname in workflow.configfiles:
     targets.append(str(fname))
 
-  # add feature rds
-  targets.extend(flatten_dict(get_read_feature_plots("rds")))
+  # the report embeds these, so they have to exist before params are written
+  targets.extend(flatten_dict(get_read_feature_plots("png")))
 
   # add heatmap plots files.txt
   plot_ids = [plot["id"] for plot  in config["plots"]["heatmap"]]
@@ -97,35 +68,77 @@ rule report_create_params:
     versions = {
       "qutrna2": VERSION,
     }
-    d["rds"] = get_read_feature_plots("rds")
-    d["rds"]["heatmap"] = get_heatmap_plots("rds")
+    # which checkout produced the run, so a report can be traced back to code
+    if shutil.which("git"):
+      def _git(*args):
+        return subprocess.run(["git", *args], stdout=subprocess.PIPE,
+                              cwd=workflow.basedir).stdout.decode().strip()
+      rev = _git("rev-parse", "--short", "HEAD")
+      if rev:
+        versions["qutrna2"] += f" ({rev}{'+dirty' if _git('status', '--porcelain') else ''})"
+    d["png"] = get_read_feature_plots("png")
+    d["png"]["heatmap"] = get_heatmap_plots("png")
+
+    bam_types = ["final"]
+    if config["call_filtered"]:
+      bam_types += [f"filtered-{f}" for f in FILTERS_APPLIED]
+
+    # everything a reader might want to open themselves, listed whether or not
+    # the report embeds it
+    d["files"] = {
+      "bam": sorted(expand("results/bam/final/{sample}.sorted.bam", sample=SAMPLES)),
+      "scores": sorted(
+        f"results/jacusa2/cond1~{c['cond1']}/cond2~{c['cond2']}/bam~{b}/{SCORES}"
+        for c in pep.config["qutrna2"]["contrasts"] for b in bam_types),
+      "plots": sorted(flatten_dict(d["png"])),
+    }
 
     sample_table = pd.read_csv(pep.config["sample_table"],sep="\t")
     d["sample_table"] = {}
     d["sample_table"]["header"] = sample_table.columns.to_list()
     d["sample_table"]["rows"] = sample_table.to_records().tolist()
 
+    def conda_version(package):
+      """version recorded for an installed conda package, or None."""
+      prefix = os.environ.get("CONDA_PREFIX")
+      if not prefix:
+        return None
+      for fname in glob.glob(os.path.join(prefix, "conda-meta", f"{package}-*.json")):
+        with open(fname) as f:
+          return json.load(f).get("version")
+      return None
+
+    def pip_version(package):
+      """installed version, plus the source commit when pip took it from a
+      repository. A package pinned by revision can keep one version string
+      across revisions, and then the commit is the only thing that identifies
+      the code that ran."""
+      try:
+        version = importlib.metadata.version(package)
+        url = importlib.metadata.distribution(package).read_text("direct_url.json")
+        commit = json.loads(url or "{}").get("vcs_info", {}).get("commit_id", "")
+        return f"{version} ({commit[:7]})" if commit else version
+      except Exception:
+        return None
+
     try:
       jacusa2_return = subprocess.check_output([config["jacusa2"]["jar"], "-h"])
       m = re.search(r"Version:\t([^\n]+)", jacusa2_return.decode("utf-8"), re.M)
       versions["jacusa2"] = m.group(1)
     except Exception:
-      versions["jacusa2"] = "unknown"
+      versions["jacusa2"] = conda_version("jacusa2") or "unknown"
 
     try:
       infernal_return = subprocess.check_output(["cmalign", "-h"])
       m = re.search(r"\n# INFERNAL ([^\n]+)", infernal_return.decode("utf-8"), re.M)
       versions["infernal"] = m.group(1)
     except Exception:
-      versions["infernal"] = "unknown"
+      versions["infernal"] = conda_version("infernal") or "unknown"
 
-    # FIXME gpu-tRNA-mapper does not support version information
-    #try:
-    #  gpu_trna_mapper_return = subprocess.check_output([config["gpu"]["bin"], "-h"])
-    #  m = re.search(r"\n# INFERNAL ([^\n]+)", gpu_trna_mapper_return.decode("utf-8"), re.M)
-    #  versions["gpu_trna_mapper"] = m.group(1)
-    #except Exception:
-    versions["gpu_trna_mapper"] = "unknown"
+    # gpu-tRNA-mapper has no version flag, so the package metadata is the only
+    # place a version is recorded
+    versions["gpu_trna_mapper"] = conda_version("gpu-trna-mapper") or "unknown"
+    versions["sprinx"] = pip_version("sprinx") or conda_version("sprinx") or "unknown"
 
     d["versions"] = versions
 

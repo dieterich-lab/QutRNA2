@@ -466,6 +466,7 @@ group_trna <- function(group_opts,
       tibble::tribble(
         ~name,                            ~type, ~group, ~object,
         output_fname,                     "pdf", group,  heatmap,
+        gsub("pdf$", "png", output_fname), "png", group,  heatmap,
         gsub("pdf$", "rds", output_fname), "rds", group,  heatmap
       )
     )
@@ -498,6 +499,7 @@ group_trna <- function(group_opts,
         tibble::tribble(
           ~name,                            ~type, ~group, ~object,
           output_fname,                     "pdf", group,  p,
+          gsub("pdf$", "png", output_fname), "png", group, p,
           gsub("pdf$", "rds", output_fname), "rds", group, p
         )
       )
@@ -542,6 +544,7 @@ group_trna <- function(group_opts,
         tibble::tribble(
           ~name,                            ~type, ~group, ~object,
           output_fname,                     "pdf", group,  p,
+          gsub("pdf$", "png", output_fname), "png", group, p,
           gsub("pdf$", "rds", output_fname), "rds", group, p
         )
       )

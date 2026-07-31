@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QutRNA2 report</title>
+<style>
+  body { font-family: system-ui, sans-serif; line-height: 1.5; margin: 0 auto;
+         max-width: 1600px; padding: 1.5rem 1rem 4rem; color: #1a1a1a; }
+  h1 { margin: 0 0 1rem; font-size: 1.6rem; }
+  h2 { margin-top: 2rem; border-bottom: 1px solid #ccc; padding-bottom: .2rem;
+       font-size: 1.2rem; }
+  h3 { margin-top: 1.5rem; font-size: 1rem; color: #444; }
+  table { border-collapse: collapse; margin: 1rem 0; font-size: .9rem; }
+  th, td { border: 1px solid #ddd; padding: .3rem .6rem; text-align: left; }
+  th { background: #f4f4f4; }
+
+  nav { position: sticky; top: 0; background: #fff; border-bottom: 2px solid #1a1a1a;
+        display: flex; gap: .25rem; margin-bottom: 1.5rem; padding-top: .5rem; }
+  nav button { font: inherit; font-size: .95rem; border: 1px solid transparent;
+               border-bottom: none; background: none; padding: .5rem 1rem;
+               cursor: pointer; color: #555; border-radius: 4px 4px 0 0; }
+  nav button:hover { background: #f0f0f0; }
+  nav button[aria-selected="true"] { background: #f4f4f4; border-color: #ccc;
+                                     color: #1a1a1a; font-weight: 600; }
+  section[hidden], div[role="tabpanel"][hidden] { display: none; }
+
+  nav.subtabs { position: static; flex-wrap: wrap; border-bottom: 1px solid #ddd;
+                margin: 0 0 1.5rem; padding-top: 0; }
+  nav.subtabs button { font-size: .85rem; padding: .35rem .7rem; }
+
+  details.plot { border: 1px solid #e2e2e2; border-radius: 4px;
+                 margin: .5rem 0; padding: .4rem .8rem; }
+  details.plot > summary { font-weight: 500; }
+  details.plot[open] { padding-bottom: .8rem; }
+
+  figure { margin: 1.5rem 0; }
+  /* never scale a plot up: a portrait QC plot rendered at full column width
+     dwarfs the surrounding text */
+  figure img { max-width: 100%; max-height: 85vh; width: auto; height: auto;
+               border: 1px solid #eee; }
+  figcaption { font-size: .9rem; color: #444; margin-bottom: .4rem; }
+  figcaption a { margin-left: .5rem; }
+
+  .missing { color: #a00; font-style: italic; }
+  details { margin: 1rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  pre { background: #f7f7f7; padding: .8rem; overflow-x: auto; font-size: .8rem; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; }
+  dt { font-weight: 600; }
+  dd { margin: 0; font-family: ui-monospace, monospace; font-size: .9rem;
+       overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+
+<h1>QutRNA2 report</h1>
+
+<nav role="tablist">
+  <button role="tab" aria-controls="overview" aria-selected="true">Overview</button>
+  <button role="tab" aria-controls="preprocessing" aria-selected="false">Preprocessing</button>
+  <button role="tab" aria-controls="results" aria-selected="false">Results</button>
+  <button role="tab" aria-controls="files" aria-selected="false">Files</button>
+  <button role="tab" aria-controls="configuration" aria-selected="false">Configuration</button>
+</nav>
+
+<section id="overview" role="tabpanel">
+  <dl>
+    <dt>Working directory</dt><dd>{{ workdir }}</dd>
+    <dt>PEP file</dt><dd>{{ pepfile }}</dd>
+    <dt>Config files</dt><dd>{{ configfiles | join(", ") }}</dd>
+    {% if filters_applied %}
+    <dt>Filters applied</dt><dd>{{ filters_applied | join(", ") }}</dd>
+    {% endif %}
+  </dl>
+
+  <h2>Versions</h2>
+  <table>
+    <tr><th>Tool</th><th>Version</th></tr>
+    {% for name, version in versions.items() %}
+    <tr><td>{{ name }}</td><td>{{ version }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <h2>Samples</h2>
+  <table>
+    <tr>{% for col in sample_table.header %}<th>{{ col }}</th>{% endfor %}</tr>
+    {% for row in sample_table.rows %}
+    <tr>{% for cell in row[1:] %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% endfor %}
+  </table>
+</section>
+
+<section id="preprocessing" role="tabpanel" hidden>
+  {% for feature, groups in png.items() if feature in ("record_count", "read_length") %}
+  <h2>{{ feature | replace("_", " ") }}</h2>
+  {% for kind, path in groups.items() if kind != "custom" %}
+  <figure>
+    <figcaption>by {{ kind }}<a href="{{ path[:-4] }}.pdf">pdf</a></figcaption>
+    {{ path | embed }}
+  </figure>
+  {% endfor %}
+  {% for plot_id, path in (groups.get("custom") or {}).items() %}
+  <figure>
+    <figcaption>{{ plot_id }}<a href="{{ path[:-4] }}.pdf">pdf</a></figcaption>
+    {{ path | embed }}
+  </figure>
+  {% endfor %}
+  {% endfor %}
+</section>
+
+<section id="results" role="tabpanel" hidden>
+  {% set contrasts = namespace(pairs=[]) %}
+  {% for cond1, by_cond2 in (png.get("heatmap") or {}).items() %}
+  {% for cond2, by_plot in by_cond2.items() %}
+  {% set contrasts.pairs = contrasts.pairs + [(cond1, cond2, by_plot)] %}
+  {% endfor %}
+  {% endfor %}
+
+  <nav class="subtabs" role="tablist">
+    {% for cond1, cond2, _ in contrasts.pairs %}
+    <button role="tab" aria-controls="contrast-{{ loop.index }}"
+            aria-selected="{{ 'true' if loop.first else 'false' }}">{{ cond1 }} vs {{ cond2 }}</button>
+    {% endfor %}
+  </nav>
+
+  {# bam~final only, and the coverage variant; the rest are listed under Files #}
+  {% for cond1, cond2, by_plot in contrasts.pairs %}
+  <div id="contrast-{{ loop.index }}" role="tabpanel" {{ "" if loop.first else "hidden" }}>
+    {% for plot_id, by_bam in by_plot.items() %}
+    {% set covs = namespace(items=[]) %}
+    {% for stem, path in (by_bam.get("final") or {}).items() if stem.endswith("_cov") %}
+    {% set covs.items = covs.items + [(stem, path)] %}
+    {% endfor %}
+    {% if covs.items %}
+    <details class="plot">
+      <summary>{{ plot_id }}{% if covs.items | length > 1 %} ({{ covs.items | length }}){% endif %}</summary>
+      {% for stem, path in covs.items %}
+      <figure>
+        <figcaption>
+          {% if stem != "heatmap_cov" %}{{ stem[:-4] }}{% else %}coverage{% endif %}
+          <a href="{{ path[:-4] }}.pdf">pdf</a>
+        </figcaption>
+        {{ path | embed }}
+      </figure>
+      {% endfor %}
+    </details>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+</section>
+
+<section id="files" role="tabpanel" hidden>
+  <p>Paths are relative to <code>{{ workdir }}</code>. Plots the report does not
+  embed are still written to disk and listed here.</p>
+  {% for label, paths in files.items() %}
+  <details>
+    <summary>{{ label }} ({{ paths | length }})</summary>
+    <pre>{{ paths | join("\n") }}</pre>
+  </details>
+  {% endfor %}
+</section>
+
+<section id="configuration" role="tabpanel" hidden>
+  <details><summary>config</summary><pre>{{ config_str }}</pre></details>
+  <details><summary>PEP</summary><pre>{{ pep_str }}</pre></details>
+  <details>
+    <summary>sample table</summary>
+    <table>
+      <tr>{% for col in sample_table.header %}<th>{{ col }}</th>{% endfor %}</tr>
+      {% for row in sample_table.rows %}
+      <tr>{% for cell in row[1:] %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </table>
+  </details>
+</section>
+
+<script>
+  // each tablist switches only its own panels, so the contrast strip nested
+  // inside Results does not fight the top-level one
+  document.querySelectorAll('nav[role="tablist"]').forEach(nav => {
+    const tabs = nav.querySelectorAll('button');
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      tabs.forEach(other => {
+        const panel = document.getElementById(other.getAttribute('aria-controls'));
+        const selected = other === tab;
+        other.setAttribute('aria-selected', selected);
+        panel.hidden = !selected;
+      });
+    }));
+  });
+</script>
+
+</body>
+</html>

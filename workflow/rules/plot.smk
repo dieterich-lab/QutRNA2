@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 from snakemake.io import directory, unpack
 
@@ -62,9 +64,12 @@ def get_heatmap_plots(ftype):
       for bam_type in bam_types:
         fname = f"results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv"
         df = pd.read_csv(fname, sep="\t")
-        df = df[df["type"] == "rds"]
+        df = df[df["type"] == ftype]
         for row in df.itertuples(index=False):
-          plots.setdefault(cond1, {}).setdefault(cond2, {}).setdefault(plot_id, {}).setdefault(bam_type, {})[row.group] = row.name
+          # the stem already carries the group as a prefix; keying by group
+          # alone collapses heatmap, heatmap_cov and heatmap_mods onto one entry
+          stem = os.path.splitext(os.path.basename(row.name))[0]
+          plots.setdefault(cond1, {}).setdefault(cond2, {}).setdefault(plot_id, {}).setdefault(bam_type, {})[stem] = row.name
 
   return plots
 
@@ -170,6 +175,7 @@ checkpoint plot_heatmap:
 rule plot_record_count:
   input: "results/stats/record_count.txt"
   output: pdf="results/plots/record_count/{FEATURE}.pdf",
+          png="results/plots/record_count/{FEATURE}.png",
           rds="results/plots/record_count/{FEATURE}.rds",
   conda: "qutrna2"
   log: "logs/plot/record_count/{FEATURE}.log"
@@ -184,6 +190,7 @@ rule plot_record_count:
 rule plot_record_count_custom:
   input: "results/stats/record_count.txt"
   output: pdf="results/plots/record_count/custom/{plot_id}.pdf",
+          png="results/plots/record_count/custom/{plot_id}.png",
           rds="results/plots/record_count/custom/{plot_id}.rds"
   conda: "qutrna2"
   log: "logs/plot/read_record_custom/{plot_id}.log"
@@ -201,6 +208,7 @@ rule plot_record_count_custom:
 rule plot_read_length:
   input: "results/stats/read_length.txt"
   output: pdf="results/plots/read_length/{FEATURE}.pdf",
+          png="results/plots/read_length/{FEATURE}.png",
           rds="results/plots/read_length/{FEATURE}.rds"
   conda: "qutrna2"
   log: "logs/plot/read_length/{FEATURE}.log"
@@ -215,6 +223,7 @@ rule plot_read_length:
 rule plot_read_length_custom:
   input: "results/stats/read_length.txt"
   output: pdf="results/plots/read_length/custom/{plot_id}.pdf",
+          png="results/plots/read_length/custom/{plot_id}.png",
           rds="results/plots/read_length/custom/{plot_id}.rds"
   conda: "qutrna2"
   log: "logs/plot/read_length_custom/{plot_id}.log"
@@ -233,6 +242,7 @@ rule plot_threshold_summary:
   input: score="results/stats/alignment_score.txt",
          cutoff="results/stats/cutoff.txt"
   output: pdf="results/plots/alignment/threshold_summary.pdf",
+          png="results/plots/alignment/threshold_summary.png",
           rds="results/plots/alignment/threshold_summary.rds"
   conda: "qutrna2"
   log: "logs/plot/threshold_summary.log"
@@ -251,6 +261,7 @@ rule plot_threshold_summary_custom:
   input: score="results/stats/alignment_score.txt",
     cutoff="results/stats/cutoff.txt"
   output: pdf="results/plots/alignment/threshold_summary/custom/{plot_id}.pdf",
+          png="results/plots/alignment/threshold_summary/custom/{plot_id}.png",
           rds="results/plots/alignment/threshold_summary/custom/{plot_id}.rds"
   conda: "qutrna2"
   log: "logs/plot/threshold_summary_custom/{plot_id}.log"

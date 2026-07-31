@@ -28,4 +28,4 @@ jobs:
           snakemake -s "$GITHUB_WORKSPACE/workflow/Snakefile" \
             --configfile analysis.yaml \
             --config pepfile=data/data.yaml \
-            --cores 2 -n --quiet rules
+            --cores 2 -n --quiet rules -- all report
