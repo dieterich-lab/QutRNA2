@@ -36,7 +36,9 @@ def create_include(name_, input_, output_, params_):
       if params.include == "copy":
         cmd = "cp"
       elif params.include == "link":
-        cmd = "ln -s"
+        # -r, because the link lands in a subdirectory and a relative target is
+        # read from there
+        cmd = "ln -sr"
 
       shell(cmd + " {input:q} {output:q}")
 
