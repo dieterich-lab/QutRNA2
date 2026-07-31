@@ -46,7 +46,7 @@ conda activate qutrna2
 
 ```console
 cp examples/analysis/map_with_gpu.yaml my_analysis.yaml
-cp examples/data/sprinzl_cm.yaml my_data.yaml
+cp examples/data/data_auto.yaml my_data.yaml
 ```
 
 Edit `my_data.yaml` to point to your reference FASTA [examples](https://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/Hsapi19-seq.html), sample description TSV (labels and filepaths to basecalled samples) [example](https://github.com/dieterich-lab/QutRNA2/blob/main/examples/sample_table_fastq.tsv), and Sprinzl coordinate labels [example for eukaryotic cytosolic tRNA](https://github.com/dieterich-lab/QutRNA2/blob/main/data/nuclear-euk-masked.txt).
@@ -156,9 +156,9 @@ QutRNA2 distinguishes the configuration of the analysis and the data. The follow
 QutRNA2 supports the following approaches to assign Sprinzl coordinates and the configuration of data input differs based on it:
 
 * automatic labeling via [sprinx](https://github.com/dieterich-lab/sprinx) (see `QutRNA2/examples/data/data_auto.yaml`, recommended),
-* using your own covariance model and secondary structure alignment (see `QutRNA2/examples/data/sprinzl_cm.yaml`),
-* using an existing aligned FASTA file (see `QutRNA2/examples/data/sprinzl_afasta.yaml`), or
-* a direct mapping of sequence to Sprinzl coordinates (see `QutRNA2/examples/data/seq_to_sprinzl.yaml`)).
+* using your own covariance model and secondary structure alignment (see `QutRNA2/examples/data/data_cm.yaml`),
+* using an existing aligned FASTA file (see `QutRNA2/examples/data/data_afasta.yaml`), or
+* a direct mapping of sequence to Sprinzl coordinates (see `QutRNA2/examples/data/data_seq_to_sprinzl.yaml`)).
 
 Those files are templates and must be adjusted to the user's needs.
 
