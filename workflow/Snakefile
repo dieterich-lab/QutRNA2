@@ -76,7 +76,7 @@ def target_trna_plots():
   return targets
 
 def target_all():
-  targets = []
+  targets = ["results/report/report.html"]
   targets.extend(target_trna_plots())
 
   if READS == "fastq":

@@ -1,0 +1,17 @@
+name: conda solve
+
+# pinned channels move upstream, so an edit that looks harmless can leave the
+# file unsolvable
+on:
+  push:
+    paths: [conda.yaml]
+  pull_request:
+    paths: [conda.yaml]
+  workflow_dispatch:
+
+jobs:
+  solve:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: $CONDA/bin/conda env create -f conda.yaml -n solve-check --dry-run
