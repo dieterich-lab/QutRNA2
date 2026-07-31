@@ -18,6 +18,8 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   if "cm" in pep.config["qutrna2"]["sprinzl"] or "scheme" in pep.config["qutrna2"]["sprinzl"]:
     _SPRINZL_CFG = pep.config["qutrna2"]["sprinzl"]
     _VALID_SCHEMES = {"euk", "arch", "bact", "mito"}
+    # how far sprinx may re-seat a mis-threaded stem; mirrors its --wc choices
+    _VALID_WC = {0, 1, 2}
     _HAS_CM = "cm" in _SPRINZL_CFG
     _HAS_SPRINZL_SCHEME = "scheme" in _SPRINZL_CFG
 
@@ -72,6 +74,14 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
         _sprinx_opts.append(f"--armless-cm-dir {_MITO_CFG['armless_cm_dir']}")
       if "cyto_cm_db" in _CYTO_CFG:
         _sprinx_opts.append(f"--cyto-cm-db {_CYTO_CFG['cyto_cm_db']}")
+      if "wc" in _SPRINZL_CFG:
+        _WC = _SPRINZL_CFG["wc"]
+        if _WC not in _VALID_WC:
+          raise ValueError(
+              f"Invalid qutrna2.sprinzl.wc={_WC!r}. "
+              f"Must be one of: {', '.join(str(v) for v in sorted(_VALID_WC))}"
+          )
+        _sprinx_opts.append(f"--wc {_WC}")
       _SPRINX_OPTS = " ".join(_sprinx_opts)
 
       rule ss_check_sprinx_headers:

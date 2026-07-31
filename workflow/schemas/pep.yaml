@@ -50,6 +50,9 @@ properties:
               scheme:
                 type: string
                 enum: ["euk", "arch", "bact", "mito"]
+              wc:
+                type: integer
+                enum: [0, 1, 2]
               mito:
                 type: object
                 properties:
