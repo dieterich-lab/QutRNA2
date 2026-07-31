@@ -40,5 +40,5 @@ dependencies:
   - pip:
     # pinned: sprinx assigns the Sprinzl labels, and its labeling logic is still
     # changing, so an unpinned revision would move published coordinates.
-    - git+https://github.com/dieterich-lab/sprinx.git@3e16c8e
+    - git+https://github.com/dieterich-lab/sprinx.git@70c8507
 prefix: /home/mpiechotta/miniconda3/envs/qutrna2
