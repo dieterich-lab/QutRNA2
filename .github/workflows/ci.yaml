@@ -7,31 +7,20 @@ on:
     branches: [main]
 
 jobs:
-  unit:
-    name: unit tests
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install pytest pandas click pysam biopython
+      # a dry run builds the DAG without running any rule, so snakemake and the
+      # PEP machinery cover everything it touches without building full conda env
+      - run: pip install "snakemake==9.8.*" pytest pandas pyyaml peppy eido click pysam biopython
+
       - run: pytest tests -q
 
-  dryrun:
-    name: dry run
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: mamba-org/setup-micromamba@v2
-        with:
-          environment-file: conda.yaml
-          environment-name: qutrna2
-          cache-environment: true
-      # a full run needs Slurm and a GPU; this only checks that the shipped
-      # templates still resolve into a DAG when we change workflow code
       - name: snakemake dry run
-        shell: bash -el {0}
         run: |
           workdir=$(mktemp -d)
           python tests/prepare_dryrun.py "$workdir"
