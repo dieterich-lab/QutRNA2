@@ -9,17 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: micromamba-shell {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      # the R scripts load GenomicRanges and SummarizedExperiment before
+      # reaching any testable code, so a python-only env cannot exercise them
+      - uses: mamba-org/setup-micromamba@v2
         with:
-          python-version: "3.12"
-      # a dry run builds the DAG without running any rule, so snakemake and the
-      # PEP machinery cover everything it touches without building full conda env
-      - run: pip install "snakemake==9.8.*" pytest pandas pyyaml peppy eido click pysam biopython
+          environment-file: tests/conda_env_tests.yaml
+          cache-environment: true
 
       - run: pytest tests -q
 
+      # a dry run builds the DAG without running any rule, so snakemake and the
+      # PEP machinery cover everything it touches without the external tools
       - name: snakemake dry run
         run: |
           workdir=$(mktemp -d)
