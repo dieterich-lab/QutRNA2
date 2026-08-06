@@ -37,15 +37,15 @@ def _report_create_params(wildcards):
   targets.extend(flatten_dict(get_read_feature_plots("png")))
 
   # add heatmap plots files.txt
-  plot_ids = [plot["id"] for plot  in config["plots"]["heatmap"]]
   bam_types = []
   if config["call_filtered"]:
     bam_types = [f"filtered-{f}" for f in FILTERS_APPLIED]
   bam_types.append("final")
   for contrast in pep.config["qutrna2"]["contrasts"]:
+    cond1, cond2 = contrast["cond1"], contrast["cond2"]
     targets.extend(expand("results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv",
-      cond1=contrast["cond1"], cond2=contrast["cond2"],
-      plot_id=plot_ids,
+      cond1=cond1, cond2=cond2,
+      plot_id=[plot["id"] for plot in heatmap_plots(cond1, cond2)],
       bam_type=bam_types))
 
   return targets

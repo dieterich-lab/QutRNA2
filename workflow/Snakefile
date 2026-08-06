@@ -67,7 +67,7 @@ def target_trna_plots():
     cond2 = contrast["cond2"]
 
     dname =  "results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}"
-    for plot in config["plots"]["heatmap"]:
+    for plot in heatmap_plots(cond1, cond2):
       targets.extend(
         expand(dname,
           cond1=cond1, cond2=cond2,

@@ -56,11 +56,11 @@ def get_heatmap_plots(ftype):
   if config["call_filtered"]:
     for f in FILTERS_APPLIED:
       bam_types.append(f"filtered-{f}")
-  for plot in config["plots"]["heatmap"]:
-    plot_id = plot["id"]
-    for contrast in contrasts:
-      cond1 = contrast["cond1"]
-      cond2 = contrast["cond2"]
+  for contrast in contrasts:
+    cond1 = contrast["cond1"]
+    cond2 = contrast["cond2"]
+    for plot in heatmap_plots(cond1, cond2):
+      plot_id = plot["id"]
       for bam_type in bam_types:
         fname = f"results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv"
         df = pd.read_csv(fname, sep="\t")

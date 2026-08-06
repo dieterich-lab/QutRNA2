@@ -260,6 +260,17 @@ properties:
             type: array
             items:
               type: string
+          conditions:
+            description: |
+              render only in contrasts naming one of these conditions; omit to
+              render in every contrast.
+
+                  conditions: [DNMT2]
+
+              renders in wt vs DNMT2 and nowhere else.
+            type: array
+            items:
+              type: string
           opts:
             type: string
         default: {}

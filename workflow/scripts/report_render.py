@@ -29,6 +29,17 @@ def embed(path):
             f'alt="{os.path.basename(path)}">')
 
 
+def pdf(path):
+    """Absolute path of the pdf written next to a rendered png.
+
+    Absolute, because the report is read from wherever it was copied to, while
+    the pdf stays where the run wrote it.
+    """
+    if not path:
+        return ""
+    return os.path.abspath(os.path.splitext(path)[0] + ".pdf")
+
+
 @click.command()
 @click.option("-o", "--output", type=str, required=True)
 @click.option("-p", "--params", type=click.Path(exists=True), required=True)
@@ -43,6 +54,7 @@ def render(template, output, params):
         autoescape=False,
     )
     env.filters["embed"] = embed
+    env.filters["pdf"] = pdf
     env.filters["to_yaml"] = yaml.dump
 
     html = env.get_template(os.path.basename(template)).render(**d)

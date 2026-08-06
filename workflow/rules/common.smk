@@ -25,6 +25,26 @@ def flatten_dict(d):
 
 ########################################################################################################################
 
+def heatmap_plots(cond1, cond2):
+  """Heatmap configs to render for one contrast.
+
+  A plot is rendered where its `conditions` names cond1 or cond2.
+
+    conditions: [DNMT2]          wt vs DNMT2
+    conditions: [DNMT2, QTRT1]   wt vs DNMT2 and wt vs QTRT1
+    no conditions key            every contrast
+  """
+  plots = []
+  for plot in config["plots"]["heatmap"]:
+    conditions = plot.get("conditions")
+    if conditions and not set(conditions) & {cond1, cond2}:
+      continue
+    plots.append(plot)
+
+  return plots
+
+########################################################################################################################
+
 # Helper function to create include rules that will copy or link files into workspace
 def create_include(name_, input_, output_, params_):
   rule:
@@ -188,6 +208,13 @@ TBL = pep.sample_table
 CONDITIONS = [[contrast["cond1"], contrast["cond2"]] for contrast in pep.config["qutrna2"]["contrasts"]]
 CONDITIONS = set(itertools.chain(*CONDITIONS))
 TBL = TBL[TBL["condition"].isin(CONDITIONS)]
+
+# a mistyped condition would silently render the plot nowhere
+for _plot in config["plots"]["heatmap"]:
+  _unknown = set(_plot.get("conditions", [])) - CONDITIONS
+  if _unknown:
+    raise Exception(f"heatmap '{_plot['id']}' names condition(s) no contrast uses: "
+                    f"{sorted(_unknown)}; contrasts use {sorted(CONDITIONS)}")
 for c in ["subsample_name", "base_calling", READS]:
   i = [isinstance(o, list) for o in TBL[c]]
   if any(i):

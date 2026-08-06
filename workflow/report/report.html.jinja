@@ -40,7 +40,9 @@
   figure img { max-width: 100%; max-height: 85vh; width: auto; height: auto;
                border: 1px solid #eee; }
   figcaption { font-size: .9rem; color: #444; margin-bottom: .4rem; }
-  figcaption a { margin-left: .5rem; }
+  figcaption .pdf { margin-left: .5rem; font-family: ui-monospace, monospace;
+                    font-size: .85rem; color: #666; overflow-wrap: anywhere;
+                    user-select: all; }
 
   .missing { color: #a00; font-style: italic; }
   details { margin: 1rem 0; }
@@ -96,13 +98,13 @@
   <h2>{{ feature | replace("_", " ") }}</h2>
   {% for kind, path in groups.items() if kind != "custom" %}
   <figure>
-    <figcaption>by {{ kind }}<a href="{{ path[:-4] }}.pdf">pdf</a></figcaption>
+    <figcaption>by {{ kind }}<span class="pdf">{{ path | pdf }}</span></figcaption>
     {{ path | embed }}
   </figure>
   {% endfor %}
   {% for plot_id, path in (groups.get("custom") or {}).items() %}
   <figure>
-    <figcaption>{{ plot_id }}<a href="{{ path[:-4] }}.pdf">pdf</a></figcaption>
+    <figcaption>{{ plot_id }}<span class="pdf">{{ path | pdf }}</span></figcaption>
     {{ path | embed }}
   </figure>
   {% endfor %}
@@ -138,8 +140,9 @@
       {% for stem, path in covs.items %}
       <figure>
         <figcaption>
-          {% if stem != "heatmap_cov" %}{{ stem[:-4] }}{% else %}coverage{% endif %}
-          <a href="{{ path[:-4] }}.pdf">pdf</a>
+          Heatmap plot with coverage{% if stem != "heatmap_cov" %},
+          {{ stem[:-4] | replace("heatmap_", "") | replace("_", " ") }}{% endif %} :
+          <span class="pdf">{{ path | pdf }}</span>
         </figcaption>
         {{ path | embed }}
       </figure>
