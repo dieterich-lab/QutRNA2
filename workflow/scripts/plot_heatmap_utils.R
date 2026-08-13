@@ -572,7 +572,9 @@ flag_positions <- function(df, flag_positions) {
 mark_positions <- function(df, pattern) {
   i <- grepl(pattern, df$trna_coords)
   if (!any(i)) {
-    stop("Pattern did not mark any position!")
+    # a target position dropped by min_cov leaves nothing to mark
+    warning("Pattern '", pattern, "' marked no position")
+    return(df)
   }
   df[i, "mark_position"] <- TRUE
 
