@@ -2,7 +2,11 @@
 
 Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
-If you use QutRNA2, please cite: [https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1](https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1)
+[![CI](https://github.com/dieterich-lab/QutRNA2/actions/workflows/ci.yaml/badge.svg)](https://github.com/dieterich-lab/QutRNA2/actions/workflows/ci.yaml)
+[![Paper](https://img.shields.io/badge/NAR%20Genom%20Bioinform-10.1093%2Fnargab%2Flqag065-blue)](https://doi.org/10.1093/nargab/lqag065)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18667756.svg)](https://doi.org/10.5281/zenodo.18667756)
+
+If you use QutRNA2, please cite: [https://doi.org/10.1093/nargab/lqag065](https://doi.org/10.1093/nargab/lqag065)
 
 ![QutRNA2 aligns reads on a GPU, filters them, assigns Sprinzl coordinates from the reference, and scores every position with JACUSA2, whose statistical tests on basecalling error rates cover mismatches, deletions and insertions. The heatmap shows those scores for a contrast between two conditions, across tRNAs and Sprinzl coordinates.](doc/img/qutrna2_graphical_abstract.jpeg)
 

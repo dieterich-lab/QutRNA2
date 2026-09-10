@@ -36,7 +36,7 @@ dependencies:
   - snakemake-executor-plugin-slurm
   - pytest
   - viennarna
-  - forgi
+  # forgi comes from pip instead: bioconda has no py312 build
   - pip
   - pip:
     # pinned: sprinx assigns the Sprinzl labels, and its labeling logic is still

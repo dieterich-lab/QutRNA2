@@ -11,7 +11,7 @@ gpu: # parameters for gpu mapping
 
 
 jacusa2: # JACUSA2 related parameters
-  jar: jacusa2 # (optional) overwrite default path to JACUSA2 jar
+  jar: JACUSA2 # (optional) overwrite default path to JACUSA2 jar
   # (optional) overwrite default parameters to JACUSA2
   opts: -Q 20 -f X:reads:nonref_ratio:insertion_ratio:deletion_ratio -A -u DirMult:subsampleRuns=100 -m 1 -q 1 -D -i -P1 FR-SECONDSTRAND -P2 FR-SECONDSTRAND
   min_cov: 10 # (optional) overwrite default minimum required reads

@@ -2,15 +2,15 @@ Bootstrap: docker
 From: continuumio/miniconda3
 
 %files
-    ../conda-lock.yaml
+    ../conda-lock-linux-64.yaml
 
 %post
-    env_name=$(head -1 conda-lock.yaml | cut -d' ' -f2)
+    env_name=qutrna2
     echo ". /opt/conda/etc/profile.d/conda.sh" >> $SINGULARITY_ENVIRONMENT
     echo "conda activate $env_name" >> $SINGULARITY_ENVIRONMENT
 
     . /opt/conda/etc/profile.d/conda.sh
-    conda env create -f conda-lock.yaml -p /opt/conda/envs/$env_name
+    conda env create -f conda-lock-linux-64.yaml -p /opt/conda/envs/$env_name
     conda clean --all
 
 %runscript
