@@ -33,6 +33,7 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
   include: "rules/sec_structure.smk"
 include: "rules/plot.smk"
 include: "rules/info.smk"
+include: "rules/report.smk"
 
 ruleorder: fastq_read_count > samtools_record_count
 ruleorder: fastq_read_length > samtools_read_length
@@ -66,7 +67,7 @@ def target_trna_plots():
     cond2 = contrast["cond2"]
 
     dname =  "results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}"
-    for plot in config["plots"]["heatmap"]:
+    for plot in heatmap_plots(cond1, cond2):
       targets.extend(
         expand(dname,
           cond1=cond1, cond2=cond2,
@@ -75,7 +76,7 @@ def target_trna_plots():
   return targets
 
 def target_all():
-  targets = []
+  targets = ["results/report/report.html"]
   targets.extend(target_trna_plots())
 
   if READS == "fastq":
@@ -89,6 +90,10 @@ def target_all():
 
 rule all:
   input: lambda wildcards: target_all() + target_info()
+
+
+rule report:
+  input: "results/report/report.html"
 
 ########################################################################################################################
 

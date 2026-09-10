@@ -69,6 +69,10 @@ custom_ggsave_option <- function() {
                 help = "Text representation of list."))
 }
 
+# the report embeds plots inline as base64, so dpi trades resolution against
+# how large the single HTML file gets
+REPORT_PNG_DPI <- 150
+
 custom_ggsave <- function(filename, plot, ggsave_opts = NULL, no_crop = TRUE) {
   if (is.null(ggsave_opts)) {
     ggsave_opts <- list()
@@ -83,6 +87,11 @@ custom_ggsave <- function(filename, plot, ggsave_opts = NULL, no_crop = TRUE) {
     knitr::plot_crop(filename, quiet = FALSE)
   }
   saveRDS(plot, gsub(".pdf$", ".rds", filename))
+
+  png_opts <- ggsave_opts
+  png_opts[["filename"]] <- gsub("\\.pdf$", ".png", filename)
+  png_opts[["dpi"]] <- REPORT_PNG_DPI
+  do.call(ggsave, png_opts)
 }
 
 ################################################################################

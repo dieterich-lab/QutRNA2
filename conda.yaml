@@ -33,4 +33,12 @@ dependencies:
   - samtools
   - snakemake=9.8
   - snakemake-executor-plugin-slurm
+  - pytest
+  - viennarna
+  - forgi
+  - pip
+  - pip:
+    # pinned: sprinx assigns the Sprinzl labels, and its labeling logic is still
+    # changing, so an unpinned revision would move published coordinates.
+    - git+https://github.com/dieterich-lab/sprinx.git@v0.2.0
 prefix: /home/mpiechotta/miniconda3/envs/qutrna2

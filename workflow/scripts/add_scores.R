@@ -132,11 +132,18 @@ read_result <- function(file, tmpdir = tempdir(), showProgress = FALSE, ...) {
 
   }
   # finished pre-processing
+  # the loop stops on the first data line, or on EOF when there is none
+  has_data <- length(line) > 0
   close(con)
 
   # check that a header could be parsed
   if (is.null(header_names)) {
     stop("No header line for file: ", file)
+  }
+
+  if (!has_data) {
+    stop("Header but no data rows in file: ", file,
+         ". Likely no position reaches min_cov in every replicate.")
   }
 
   # read data

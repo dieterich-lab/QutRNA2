@@ -466,6 +466,7 @@ group_trna <- function(group_opts,
       tibble::tribble(
         ~name,                            ~type, ~group, ~object,
         output_fname,                     "pdf", group,  heatmap,
+        gsub("pdf$", "png", output_fname), "png", group,  heatmap,
         gsub("pdf$", "rds", output_fname), "rds", group,  heatmap
       )
     )
@@ -498,6 +499,7 @@ group_trna <- function(group_opts,
         tibble::tribble(
           ~name,                            ~type, ~group, ~object,
           output_fname,                     "pdf", group,  p,
+          gsub("pdf$", "png", output_fname), "png", group, p,
           gsub("pdf$", "rds", output_fname), "rds", group, p
         )
       )
@@ -542,6 +544,7 @@ group_trna <- function(group_opts,
         tibble::tribble(
           ~name,                            ~type, ~group, ~object,
           output_fname,                     "pdf", group,  p,
+          gsub("pdf$", "png", output_fname), "png", group, p,
           gsub("pdf$", "rds", output_fname), "rds", group, p
         )
       )
@@ -569,7 +572,9 @@ flag_positions <- function(df, flag_positions) {
 mark_positions <- function(df, pattern) {
   i <- grepl(pattern, df$trna_coords)
   if (!any(i)) {
-    stop("Pattern did not mark any position!")
+    # a target position dropped by min_cov leaves nothing to mark
+    warning("Pattern '", pattern, "' marked no position")
+    return(df)
   }
   df[i, "mark_position"] <- TRUE
 

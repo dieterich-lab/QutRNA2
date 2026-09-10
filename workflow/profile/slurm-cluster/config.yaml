@@ -44,6 +44,4 @@ set-resources:
     gres: "gpu:turing:1"
 show-failed-logs: True
 printshellcmds: True
-use-conda: True
-use-envmodules: True
 restart-times: 0

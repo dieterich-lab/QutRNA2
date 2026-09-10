@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: micromamba-shell {0}
+    steps:
+      - uses: actions/checkout@v4
+      # the R scripts load GenomicRanges and SummarizedExperiment before
+      # reaching any testable code, so a python-only env cannot exercise them
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: tests/conda_env_tests.yaml
+          cache-environment: true
+
+      - run: pytest tests -q
+
+      # a dry run builds the DAG without running any rule, so snakemake and the
+      # PEP machinery cover everything it touches without the external tools
+      - name: snakemake dry run
+        run: |
+          workdir=$(mktemp -d)
+          python tests/prepare_dryrun.py "$workdir"
+          cd "$workdir"
+          snakemake -s "$GITHUB_WORKSPACE/workflow/Snakefile" \
+            --configfile analysis.yaml \
+            --config pepfile=data/data.yaml \
+            --cores 2 -n --quiet rules -- all report

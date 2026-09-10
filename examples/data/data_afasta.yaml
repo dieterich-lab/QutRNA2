@@ -22,4 +22,4 @@ qutrna2: # qutrna2 related options go here
     - cond1: conditionA # name of 1st condition (make sure this is a value from column "condition" in sample_table)
       cond2: conditionB # name of 2nd condition (make sure this is a value from column "condition" in sample_table)
     - cond1: conditionA
-      cond2: condition
+      cond2: conditionB

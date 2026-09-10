@@ -4,6 +4,8 @@ Robust tRNA modification discovery from Nanopore direct tRNA sequencing
 
 If you use QutRNA2, please cite: [https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1](https://www.biorxiv.org/content/10.1101/2025.10.20.683443v1)
 
+![QutRNA2 aligns reads on a GPU, filters them, assigns Sprinzl coordinates from the reference, and scores every position with JACUSA2, whose statistical tests on basecalling error rates cover mismatches, deletions and insertions. The heatmap shows those scores for a contrast between two conditions, across tRNAs and Sprinzl coordinates.](doc/img/qutrna2_graphical_abstract.jpeg)
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
@@ -19,6 +21,7 @@ If you use QutRNA2, please cite: [https://www.biorxiv.org/content/10.1101/2025.1
 - [Examples](#examples)
 - [Execute Workflow](#execute-workflow)
 - [Results](#results)
+  - [Report](#report)
   - [Alignments](#alignments)
   - [cmalign](#cmalign)
   - [JACUSA2](#jacusa2)
@@ -46,7 +49,7 @@ conda activate qutrna2
 
 ```console
 cp examples/analysis/map_with_gpu.yaml my_analysis.yaml
-cp examples/data/sprinzl_cm.yaml my_data.yaml
+cp examples/data/data_auto.yaml my_data.yaml
 ```
 
 Edit `my_data.yaml` to point to your reference FASTA [examples](https://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/Hsapi19-seq.html), sample description TSV (labels and filepaths to basecalled samples) [example](https://github.com/dieterich-lab/QutRNA2/blob/main/examples/sample_table_fastq.tsv), and Sprinzl coordinate labels [example for eukaryotic cytosolic tRNA](https://github.com/dieterich-lab/QutRNA2/blob/main/data/nuclear-euk-masked.txt).
@@ -65,6 +68,10 @@ snakemake \
 ```
 
 A list of jobs to be executed should appear. If it does without errors, remove `-n` and increase `-c` to the number of available cores to start the analysis.
+
+**5. Read the report:**
+
+A finished run writes `<ANALYSIS_OUTPUT>/results/report/report.html`. Open it in a browser for the final heatmaps, the preprocessing plots, configuration settings that were used, and the version of every tool that ran. It embeds its images, and contains file-paths to alignment BAM files and intermediate files for inspection.
 
 ## New Features
 
@@ -155,7 +162,8 @@ QutRNA2 distinguishes the configuration of the analysis and the data. The follow
 
 QutRNA2 supports the following approaches to assign Sprinzl coordinates and the configuration of data input differs based on it:
 
-* **(recommended)** using a covarince model and secondary structure alignment (see `QutRNA2/examples/data/data_cm.yaml`),
+* **(recommended)** automatic labeling via [sprinx](https://github.com/dieterich-lab/sprinx) (see `QutRNA2/examples/data/data_auto.yaml`),
+* using your own covariance model and secondary structure alignment (see `QutRNA2/examples/data/data_cm.yaml`),
 * using an existing aligned FASTA file (see `QutRNA2/examples/data/data_afasta.yaml`), or
 * a direct mapping of sequence to Sprinzl coordinates (see `QutRNA2/examples/data/data_seq_to_sprinzl.yaml`)).
 
@@ -168,15 +176,24 @@ Data for entries with the same "sample_name" will be merged - they represent tec
 Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
 
 ### Sprinzl
-For eukaryotic nuclear tRNAs we use the Sprinzl labels at: `data/nuclear-euk-masked.txt`.
 
-For human mt-tRNAs, we use the sequence to Sprinzl mapping in [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6) 
-and deposited the data along with the Sprinzl labels to: `data/human_mt_seq_to_sprinzl.tsv` and `data/human_mt_sprinzl_labels.txt`.
+**Automatic labeling (recommended):** in your data YAML, set `qutrna2.sprinzl.scheme` to one of `euk`, `arch`, `bact`, `mito`, matching your tRNAs. [sprinx](https://github.com/dieterich-lab/sprinx) then picks a covariance model, aligns your tRNAs against it, and assigns each Sprinzl position from the resulting structure. See `examples/data/data_auto.yaml` for a template.
 
-It is crucial to obtain covariance models for the organism and tRNAs studied if you are using the covariance model based workflow (i.e. based on `data_cm.yaml` template config file). These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models). For eukaryotic nuclear tRNAs, we use the following covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm).
+- `mito` accounts for tRNAs that may have lost an arm (common in some mitochondrial genomes): it tries several CMs and diagnoses arm loss rather than assuming a cloverleaf structure. `euk`/`arch`/`bact` assume no arm loss and select from a combined CM database instead.
+- sprinx ships with default CMs for each scheme; override them with `qutrna2.sprinzl.mito.canonical_cm` (a list) and `qutrna2.sprinzl.mito.armless_cm_dir` for `scheme: mito`, or `qutrna2.sprinzl.cyto.cyto_cm_db` for `scheme: euk`/`arch`/`bact`.
+- your reference FASTA headers need to carry each tRNA's anticodon and amino acid somewhere sprinx can find it: as `id|aa|anticodon|taxon`, an `anticodon=XXX` tag, or a GtRNAdb-style name like `tRNA-Ala-TGC`. The pipeline checks every header against this before doing any work, and reports exactly which records don't match.
+- which Sprinzl labels get plotted, and in what order, is derived from the labels sprinx assigns. Set `qutrna2.sprinzl.labels` to override this list yourself, e.g. to drop a position from the heatmap by setting it to `-`.
+
+**Manual / precomputed:** In the QutRNA2 publication, for eukaryotic nuclear tRNAs, we used the covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and corresponding labels in `data/nuclear-euk-masked.txt`. To use this approach yourself, set `qutrna2.sprinzl.cm` together with `qutrna2.sprinzl.labels` (or `qutrna2.sprinzl.label`) to supply your own CM and a Sprinzl labels file. 
+The latter is required in this mode of running QutRNA2.
+
+For human mt-tRNAs, use the sequence to Sprinzl mapping from [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6), available in `data/human_mt_seq_to_sprinzl.tsv` (`data/human_mt_sprinzl_labels.txt` is an optional override for which labels are plotted).
+
+You need to obtain covariance models for the organism and tRNAs studied, if you'd like to use the
+manual approach. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
 
 ## Setup analysis configuration
-Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. For the recommended GPU run, use `examples/analysis//map_with_gpu.yaml` as your template. Use `examples/analysis/map_with_parasail.yaml` instead as a template if you don't use GPU and would like to use parasail, but expect significantly longer runtimes.
+Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. For the recommended GPU run, use `examples/analysis//map_with_gpu.yaml` as your template. Use `examples/analysis/map_with_parasail.yaml` instead as a template if you don't use GPU and would like to use parasail. Expect significantly longer runtimes.
 
 Add any necessary init code for the GPU and provide paths for JACUSA2 and gpu-tRNA-mapper if they are not in the standard path.
 
@@ -246,6 +263,18 @@ When the analysis is finished, the `<ANALYSIS_OUTPUT>` directory will contain th
 `<ANALYSIS_OUTPUT>/logs/` will contain logs for executed jobs.
 `<ANALYSIS_OUTPUT>/results/` will contain all calculations.
 
+### report
+`<ANALYSIS_OUTPUT>/results/report/report.html` is the entry point to a finished run. Five tabs:
+
+- **Overview** - working directory, config files, filters applied, the sample table, and the versions of QutRNA2, JACUSA2, Infernal, gpu-tRNA-mapper and sprinx. QutRNA2 and sprinx also record the commit they were built from.
+- **Preprocessing** - read count and read length plots, showing what each filter removed.
+- **Results** - the heatmaps, one sub-tab per contrast.
+- **Files** - paths to the final BAMs, the score tables and every plot, including the ones that the report does not embed.
+- **Configuration** - the analysis and data YAML that was used for the pipeline run.
+
+Images are embedded as data URIs. The HTML file therefore opens anywhere without its plot directory, and a run with many contrasts can produce a report as large as tens of MB.
+
+
 ### data
 The directory `<ANALYSIS_OUTPUT>/results/data` will contain processed instances of the reference sequence.
 
@@ -262,7 +291,7 @@ The directory `<ANALYSIS_OUTPUT>/results/jacusa2` will contain JACUSA2 results f
 ## Plots
 The directory `<ANALYSIS_OUTPUT>/results/plots` will contain plots. These are heatmaps of the JACUSA2 scores across tRNA positions or all tRNAs that the reads were mapped to and retained after filtering.
 
-Check `<ANALYSIS_OUTPUT>/results/plots/scores/cond1~{cond1}/cond2~{cond1}/{id}/bam~final/heatmap.pdf`. This plot concludes the analysis.
+Check `<ANALYSIS_OUTPUT>/results/plots/scores/cond1~{cond1}/cond2~{cond2}/{id}/bam~final/heatmap.pdf`.
 
 ### stats
 If filters were applied, the directory `<ANALYSIS_OUTPUT>/results/stats` will contain summary statistics for features such as alignment score, read length, and read count.

@@ -1,0 +1,38 @@
+# Environment for the CI test job. Covers what workflow/scripts imports, so
+# tests for the R scripts and the python helpers share one env.
+#
+# Left out of conda.yaml's dependency list: JACUSA2, gpu-trna-mapper, infernal
+# and samtools, which no unit test invokes, and r-tinytex/r-rmarkdown/r-knitr,
+# which pull TeX Live for report rendering.
+name: qutrna2-tests
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pytest
+  - snakemake=9.8
+  - pandas
+  - pyyaml
+  - peppy
+  - eido
+  - click
+  - pysam
+  - biopython
+  - r-base
+  - r-optparse
+  - r-dplyr
+  - r-tibble
+  - r-tidyr
+  - r-data.table
+  - r-scales
+  - r-ggplot2
+  - r-stringr
+  - r-rlang
+  - r-patchwork
+  - r-gridextra
+  - r-yaml
+  - bioconductor-genomicranges
+  - bioconductor-summarizedexperiment
+  - bioconductor-iranges
+  - bioconductor-biostrings
