@@ -7,7 +7,7 @@ channels:
   - defaults
 dependencies:
   - gpu-trna-mapper
-  - JACUSA2=2.1.16
+  - JACUSA2=2.1.17
   - bioconductor-summarizedexperiment
   - bioconductor-rsamtools
   - r-base
@@ -41,4 +41,3 @@ dependencies:
     # pinned: sprinx assigns the Sprinzl labels, and its labeling logic is still
     # changing, so an unpinned revision would move published coordinates.
     - git+https://github.com/dieterich-lab/sprinx.git@v0.2.0
-prefix: /home/mpiechotta/miniconda3/envs/qutrna2

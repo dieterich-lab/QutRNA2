@@ -75,7 +75,7 @@ A finished run writes `<ANALYSIS_OUTPUT>/results/report/report.html`. Open it in
 
 ## New Features
 
-QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.16](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.16/JACUSA_v2.1.16.jar) is included, featuring subsampled scores that improve the signal-to-noise ratio for identifying tRNA modifications.
+QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.17](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.17/JACUSA_v2.1.17.jar) is included, featuring subsampled scores that improve the signal-to-noise ratio for identifying tRNA modifications.
 
 Finally, a filter framework has been added to the analysis workflow to remove spurious alignments by applying the following filters:
 
@@ -170,7 +170,7 @@ QutRNA2 supports the following approaches to assign Sprinzl coordinates and the 
 Those files are templates and must be adjusted to the user's needs.
 
 ## Setup data configuration
-First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" or "bam" - they directly correspond to columns - see `examples/sample_desc_fastq.tsv`.
+First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" or "bam" - they directly correspond to columns - see `examples/sample_table_fastq.tsv`.
 Data for entries with the same "sample_name" will be merged - they represent technical replicates. For historical reasons, the column "base_calling" is present. Set it to "pass". Finally, the column "fastq" should point to the path of the compressed (gzip) fastq file.
 
 Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
