@@ -23,7 +23,8 @@ dependencies:
   - r-patchwork
   - r-tinytex
   - r-yardstick
-  - infernal
+  # pinned: cmalign's alignment decides the Sprinzl coordinates
+  - infernal=1.1.5
   - jinja2
   - yaml
   - click
