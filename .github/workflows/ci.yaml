@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, "feat/**", "fix/**"]
+    branches: [main, "feat/**", "fix/**", "chore/**"]
   pull_request:
     branches: [main]
 
@@ -14,8 +14,7 @@ jobs:
         shell: micromamba-shell {0}
     steps:
       - uses: actions/checkout@v4
-      # the R scripts load GenomicRanges and SummarizedExperiment before
-      # reaching any testable code, so a python-only env cannot exercise them
+      # R is in this env because the R scripts import bioconductor on load
       - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: tests/conda_env_tests.yaml
@@ -23,14 +22,53 @@ jobs:
 
       - run: pytest tests -q
 
-      # a dry run builds the DAG without running any rule, so snakemake and the
-      # PEP machinery cover everything it touches without the external tools
-      - name: snakemake dry run
+      # builds the DAG for each example template. A dry run does not execute
+      # any rule, which is why the external tools are not required.
+      # --list enumerates examples/; adding a template does not need an edit here
+      - name: snakemake dry run, each example template
         run: |
-          workdir=$(mktemp -d)
-          python tests/prepare_dryrun.py "$workdir"
-          cd "$workdir"
-          snakemake -s "$GITHUB_WORKSPACE/workflow/Snakefile" \
-            --configfile analysis.yaml \
-            --config pepfile=data/data.yaml \
-            --cores 2 -n --quiet rules -- all report
+          set -e
+          python tests/prepare_dryrun.py --list > combos.txt
+          while read -r data analysis extra; do
+            echo "::group::dry run $data + $analysis $extra"
+            workdir=$(mktemp -d)
+            python tests/prepare_dryrun.py "$workdir" \
+              --data "$data" --analysis "$analysis" $extra
+            (
+              cd "$workdir"
+              snakemake -s "$GITHUB_WORKSPACE/workflow/Snakefile" \
+                --configfile analysis.yaml \
+                --config pepfile=data/data.yaml \
+                --cores 2 -n --quiet rules -- all report
+            )
+            rm -rf "$workdir"
+            echo "::endgroup::"
+          done < combos.txt
+
+  # only the three tools named in a config. Unpinned, to catch any bioconda rename
+  tools:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: micromamba-shell {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: tools
+          condarc: |
+            channels:
+              - conda-forge
+              - bioconda
+          create-args: >-
+            python=3.12
+            pytest
+            pyyaml
+            JACUSA2
+            infernal
+            samtools
+          cache-environment: true
+
+      - run: pytest tests/test_packaging.py -q
+        env:
+          QUTRNA2_REQUIRE_TOOLS: "1"
