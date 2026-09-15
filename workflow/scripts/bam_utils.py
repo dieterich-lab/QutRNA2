@@ -1,13 +1,12 @@
-import click
 import enum
-
-import pandas as pd
-import pysam
+import gzip
 import os
 import sys
-import gzip
+from collections import Counter
 from contextlib import nullcontext
-from collections import Counter, defaultdict
+
+import click
+import pysam
 
 
 @click.group()
@@ -83,13 +82,6 @@ def check_coordinate_sorted(samfile):
         raise Exception("BAM must be sorted by coordinate!")
 
 
-def pysam_stding(fname):
-    if fname == "/dev/stdin":
-        return "_"
-
-    return fname
-
-
 @cli.command()
 @click.option("-t", "--tag", default="NH", type=str)
 @click.option("-o", "--output", default="-", type=click.Path())
@@ -141,7 +133,7 @@ def count_tag(bam, tag, column, output):
         counts[read.get_tag(tag)] += 1
 
     with open(output, "w") if output else nullcontext(output) as f:
-        line = "\t".join([column, "count"])
+        line = f"{column}\tcount"
         f.write(f"{line}\n")
         for key, count in counts.items():
             line = "\t".join([str(key), str(count)])
@@ -240,69 +232,6 @@ def get_overlap(start1, end1, start2, end2):
     start = max(start1, start2)
     end = min(end1, end2)
     return max(end - start + 1, 0)
-
-
-@cli.command()
-@click.option("--trna-annotation", type=click.Path(exists=True))
-@click.option("--five-adapter", type=int, default=0)
-@click.option("--three-adapter", type=int, default=0)
-@click.option("-o", "--output", default="-", type=click.Path())
-@click.argument("BAM", type=click.Path(exists=True))
-def overlap_profile(bam, trna_annotation, five_adapter, three_adapter, output):
-    in_samfile = pysam.AlignmentFile(pysam_stdin(bam), "rb")
-
-    trna_annotation = pd.read_csv(trna_annotation, sep="\t")
-    trna_annotation["trna_length"] = trna_annotation["seq"].str.len()
-    trna_lengths = trna_annotation[["trna", "trna_length"]].set_index("trna").to_dict()["trna_length"]
-
-    def overlap_five_adapter(pos):
-        return pos >= 0 and pos < five_adapter
-
-    def overlap_trna(pos, trna_length):
-        return pos >= 0 and five_adapter <= pos < five_adapter + trna_length
-
-    def overlap_three_adapter(pos, trna_length):
-        return pos >= 0 and five_adapter + trna_length <= pos
-
-    def helper(record):
-        ov = []
-        trna_length = trna_lengths[record.reference_name]
-        if overlap_five_adapter(record.reference_start):
-            ov.append("5")
-            if overlap_three_adapter(record.reference_end - 1, trna_length):
-                ov.append("tRNA")
-                ov.append("3")
-            elif overlap_trna(record.reference_end - 1, trna_length):
-                ov.append("tRNA")
-        elif overlap_trna(record.reference_start, trna_length):
-            ov.append("tRNA")
-            if overlap_trna(record.reference_end - 1, trna_length):
-                ov.append("3")
-        elif overlap_three_adapter(record.reference_start, trna_length):
-            ov.append("3")
-
-        if not ov:
-            raise Exception(record)
-
-        return "-".join(ov)
-
-    # count read overlaps per trna and positions
-    counter = defaultdict(lambda : defaultdict(lambda : Counter()))
-    for record in in_samfile:
-        read_overlap = helper(record)
-        for pos in range(record.reference_start, record.reference_end):
-            counter[record.reference_name][pos][read_overlap] += 1
-
-    # write output
-    with open(output, "w") as fout:
-        header = "\t".join(["trna", "seq_position", "read_overlap", "count"])
-        fout.write(f"{header}\n")
-        for trna in counter.keys():
-            for pos in counter[trna].keys():
-                for read_overlap in counter[trna][pos].keys():
-                    line = "\t".join([trna, str(pos), read_overlap, str(counter[trna][pos][read_overlap])])
-                    fout.write(f"{line}\n")
-
 
 
 @cli.command()
@@ -555,8 +484,7 @@ def filter(bam,
     # print out statistics
     if stats:
         with open(stats, "w") as f:
-            for key, value in counter.items():
-                f.write(f"{key}\t{value}\n")
+            f.writelines(f"{key}\t{value}\n" for key, value in counter.items())
 
     # close handlers
     out_samfile.close()
@@ -568,7 +496,7 @@ def filter(bam,
 @click.option("-s", "--simple-count", is_flag=True, default=False)
 @click.argument("BAM", type=click.Path(exists=True))
 def count_records(bam, simple_count, output):
-    """Count multimapper"""
+    """Count records, and how many reads carry each number of hits."""
 
     in_samfile = pysam.AlignmentFile(pysam_stdin(bam), "rb")
     counter = Counter()
@@ -603,13 +531,12 @@ def count_records(bam, simple_count, output):
         unique = counter[1]
         multiple = counter.total() - unique
         with open(output, "w") as f:
-            f.write(f"unique_reads\tmultimapper_reads\treads\ttotal_records\n")
+            f.write("unique_reads\tmultimapper_reads\treads\ttotal_records\n")
             f.write(f"{unique}\t{multiple}\t{counter.total()}\t{total_records}\n")
     else:
         with open(output, "w") as f:
-            f.write(f"number_hits\trecords\n")
-            for key, value in counter.items():
-                f.write(f"{key}\t{value}\n")
+            f.write("number_hits\trecords\n")
+            f.writelines(f"{key}\t{value}\n" for key, value in counter.items())
 
 
 @cli.command()
@@ -665,8 +592,8 @@ def count_record_length(bam, output):
     if dname:
         os.makedirs(dname, exist_ok=True)
     with (open(output, "w") as f):
-        f.write(f"read_length\tunique_reads\tmultimapper_reads\treads\trecords\n")
-        for read_length in record_rl.keys():
+        f.write("read_length\tunique_reads\tmultimapper_reads\treads\trecords\n")
+        for read_length in record_rl:
             read_lengths = [
                 str(read_length),
                 str(unique_rl[read_length]),

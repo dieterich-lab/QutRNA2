@@ -33,7 +33,7 @@ def _report_create_params(wildcards):
   for fname in workflow.configfiles:
     targets.append(str(fname))
 
-  # the report embeds these, so they have to exist before params are written
+  # the report embeds these. They have to exist before params are written
   targets.extend(flatten_dict(get_read_feature_plots("png")))
 
   # add heatmap plots files.txt
@@ -68,7 +68,7 @@ rule report_create_params:
     versions = {
       "qutrna2": VERSION,
     }
-    # which checkout produced the run, so a report can be traced back to code
+    # records which checkout produced the run, which traces a report to code
     if shutil.which("git"):
       def _git(*args):
         return subprocess.run(["git", *args], stdout=subprocess.PIPE,
@@ -135,8 +135,8 @@ rule report_create_params:
     except Exception:
       versions["infernal"] = conda_version("infernal") or "unknown"
 
-    # gpu-tRNA-mapper has no version flag, so the package metadata is the only
-    # place a version is recorded
+    # gpu-tRNA-mapper does not take a version flag. The package metadata is
+    # the only place that records a version
     versions["gpu_trna_mapper"] = conda_version("gpu-trna-mapper") or "unknown"
     versions["sprinx"] = pip_version("sprinx") or conda_version("sprinx") or "unknown"
 

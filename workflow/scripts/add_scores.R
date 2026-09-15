@@ -114,7 +114,7 @@ read_result <- function(file, tmpdir = tempdir(), showProgress = FALSE, ...) {
   jacusa_header <- c()
   while (TRUE) {
     line <- readLines(con, n = 1)
-    # quit reading: nothing to read or first no header line
+    # stop at end of file, or at the first line that does not start with #
     if (length(line) == 0 || length(grep("^#", line)) == 0) {
       break
     }

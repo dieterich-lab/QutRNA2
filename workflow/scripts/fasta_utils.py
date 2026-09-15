@@ -1,12 +1,12 @@
-import click
 import enum
 import gzip
 import re
-import pandas as pd
 from collections import defaultdict
-from os.path import commonprefix
 from functools import partial
+from os.path import commonprefix
 
+import click
+import pandas as pd
 import pysam
 
 
@@ -121,7 +121,7 @@ def transform(fasta, linker5, linker3, linker5_length, linker3_length, remove_li
 
     if linker5:
       def helper(record):
-        record.seq = f"{linker5}{str(record.seq)}"
+        record.seq = f"{linker5}{record.seq!s}"
 
         return(record)
       tasks.append(helper)
@@ -186,9 +186,9 @@ def unique_trna_seq(records):
 
   # normalize labels
   new_records = {}
-  for trna_seq, trna_ids in trna_seq_to_id.items():
+  for trna_ids in trna_seq_to_id.values():
     trna_id = normalize_trna_ids(list(trna_ids))
-    record = records[list(trna_ids)[0]]
+    record = records[next(iter(trna_ids))]
     record.id = trna_id
     record.name = trna_id
     record.description = ""

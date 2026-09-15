@@ -49,9 +49,8 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
       raise ValueError("qutrna2.sprinzl.cm requires qutrna2.sprinzl.labels.")
 
     if _HAS_SPRINZL_SCHEME:
-      # sprinx runs its own cmalign internally and assigns Sprinzl labels
-      # from stem-loop topology, so this branch skips the AFASTA/consensus-
-      # label chain entirely.
+      # sprinx runs its own cmalign and assigns Sprinzl labels from stem-loop
+      # topology. This branch therefore skips the AFASTA/consensus-label chain.
       _SPRINZL_SCHEME = _SPRINZL_CFG["scheme"]
       if _SPRINZL_SCHEME not in _VALID_SCHEMES:
         raise ValueError(
@@ -245,9 +244,9 @@ if pep.config["qutrna2"]["coords"] == "sprinzl":
     raise Exception("Must provide either 'cm' or 'seq_to_sprinzl' in pep!")
 
   if "SPRINZL_LABELS" not in globals():
-    # cm+scheme and seq_to_sprinzl both produce a seq_to_sprinzl TSV directly,
-    # with no separately maintained ordered label list; derive the flat label
-    # list plot_heatmap.R needs from the union of labels in it.
+    # cm+scheme and seq_to_sprinzl both write a seq_to_sprinzl TSV and do not
+    # write an ordered label list. Derive the flat list that plot_heatmap.R
+    # needs from the union of labels in that TSV.
     SPRINZL_LABELS = "results/data/sprinzl_labels_auto.txt"
 
     rule ss_derive_sprinzl_labels:

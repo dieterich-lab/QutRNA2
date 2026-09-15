@@ -1,7 +1,11 @@
-"""Unit tests for workflow/scripts/sprinzl_utils.py.
+"""test_sprinzl_utils.py - label ordering and the sprinx TSV conversion
 
-Only the parts needing no external tool: label ordering, which decides heatmap
-column order, and the sprinx TSV conversion feeding it.
+input:   TSV fixtures written under tmp_path
+output:  pytest assertions
+usage:   pytest tests/test_sprinzl_utils.py
+env:     none
+notes:   covers the parts that run without an external tool. Heatmap column
+         order is decided by label order, and the sprinx conversion feeds it
 """
 import csv
 import importlib.util
@@ -25,7 +29,7 @@ sprinzl_utils = _load("sprinzl_utils")
 
 def test_labels_sort_in_5p_to_3p_order():
     """One pass over every label shape the pipeline emits. The awkward cases:
-    60Z precedes 60AA, the variable arm sits inside the 45/46 gap, and its 3'
+    60Z precedes 60AA, the variable arm falls inside the 45/46 gap, and its 3'
     stem counts down (e27 before e21) because that is how it reads 5'->3'."""
     shuffled = ["46", "e21", "60AA", "17A", "9", "e1", "60Z", "20B", "45",
                 "17", "e27", "60", "76", "e11", "20", "e5", "60A", "20A", "e17"]
@@ -36,9 +40,9 @@ def test_labels_sort_in_5p_to_3p_order():
 
 
 def test_sprinx_conversion_normalizes_case_and_indexing(tmp_path):
-    """sprinx writes 0-based indices and lowercase insertion codes; downstream
-    wants 1-based seq_pos and 17A/20B, with 'e' labels left alone. Positions
-    sprinx could not label carry no row."""
+    """sprinx writes 0-based indices and lowercase insertion codes. 1-based
+    seq_pos and 17A/20B are expected downstream, with 'e' labels left alone. A position
+    that could not be labelled by sprinx does not get a row."""
     src, out = tmp_path / "sprinx.tsv", tmp_path / "seq_to_sprinzl.tsv"
     with open(src, "w", newline="") as fh:
         w = csv.writer(fh, delimiter="\t", lineterminator="\n")
@@ -51,7 +55,8 @@ def test_sprinx_conversion_normalizes_case_and_indexing(tmp_path):
 
     sprinzl_utils.sprinx_to_seq_to_sprinzl.callback(str(src), str(out))
 
-    rows = list(csv.DictReader(open(out), delimiter="\t"))
+    with open(out) as fh:
+        rows = list(csv.DictReader(fh, delimiter="\t"))
     assert {r["sprinzl"] for r in rows} == {"17", "17A", "20B", "e11"}
     assert next(r["seq_pos"] for r in rows if r["sprinzl"] == "17") == "1"
 
@@ -67,4 +72,5 @@ def test_derived_labels_are_ordered_and_skip_blanks(tmp_path):
 
     sprinzl_utils.derive_sprinzl_labels.callback(str(src), str(out))
 
-    assert open(out).read().split() == ["17", "20", "20A"]
+    with open(out) as fh:
+        assert fh.read().split() == ["17", "20", "20A"]

@@ -1,8 +1,9 @@
-import click
 import enum
 import gzip
-from mimetypes import guess_type
 from functools import partial
+from mimetypes import guess_type
+
+import click
 from Bio import SeqIO
 
 
@@ -50,12 +51,11 @@ def transform(fastq, base_change, reverse, output):
     if reverse:
         tasks.append(do_reverse)
 
-    with open_in(fastq) as fin:
-        with open_out(output) as fout:
-            for record in SeqIO.parse(fin, 'fastq'):
-                for task in tasks:
-                    record = task(record)
-                SeqIO.write(record, fout, "fastq")
+    with open_in(fastq) as fin, open_out(output) as fout:
+        for record in SeqIO.parse(fin, 'fastq'):
+            for task in tasks:
+                record = task(record)
+            SeqIO.write(record, fout, "fastq")
 
 
 if __name__ == '__main__':

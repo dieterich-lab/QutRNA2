@@ -1,6 +1,5 @@
 import csv
 import os
-import logging
 import re
 from collections import defaultdict
 
@@ -8,9 +7,6 @@ import click
 import pandas as pd
 import pysam
 from Bio import AlignIO
-
-
-logger = logging.getLogger(__name__)
 
 
 @click.group()
@@ -37,10 +33,10 @@ def _label_sort_key(label):
     sort by (number, suffix length, suffix): suffix length before suffix
     itself so a single-letter overflow (Z) sorts before the two-letter
     overflow that follows it (AA), which plain string comparison gets wrong.
-    variable-arm 'e' labels (class-ii: Leu, Ser) sit strictly between 45 and
+    variable-arm 'e' labels (class-ii: Leu, Ser) fall strictly between 45 and
     46: e11-e17 (5' stem) first, then e1-e5 (loop), then e21-e27 (3' stem),
     but the 3' stem is numbered in REVERSE as you read it 5'->3' (e27
-    comes before e21), so its sort order needs the digit negated or e27
+    comes before e21). Its sort order therefore negates the digit, or e27
     would wrongly sort after e21."""
     m = re.match(r"e(\d)(\d)?([A-Za-z]*)$", label)
     if m:
@@ -56,27 +52,6 @@ def _label_sort_key(label):
     num, suffix = m.group(1), m.group(2)
     return (int(num), 0, 0, 0, len(suffix), suffix)
 
-
-def _column_has_residue(align, col_idx):
-    residue_count = 0
-    gap_count = 0
-    other_symbols = []
-    unusual_record_ids = []
-    for record in align:
-        base = str(record.seq[col_idx])
-        if base not in ["-", "."]:
-            residue_count += 1
-            if not base.isalpha() and base not in other_symbols:
-                other_symbols.append(base)
-                unusual_record_ids.append(record.id)
-        else:
-            gap_count += 1
-    if unusual_record_ids:
-        logger.debug(
-            f"alignment column {col_idx} summary: residues={residue_count} gaps={gap_count} "
-            f"unusual_symbols={other_symbols} unusual_record_ids={unusual_record_ids}"
-        )
-    return residue_count > 0
 
 
 @cli.command("check-sprinx-headers")
@@ -143,18 +118,17 @@ def sprinx_to_seq_to_sprinzl(sprinx_tsv, output):
 @click.option("--output", required=True, help="Output FNAME (plain ordered label list)")
 @click.argument("seq_to_sprinzl", type=click.Path(exists=True))
 def derive_sprinzl_labels(seq_to_sprinzl, output):
-    """Derive the flat, ordered Sprinzl label list plot_heatmap.R expects for
-    --sprinzl from the union of labels present in a seq_to_sprinzl
-    TSV, so modes that produce that TSV directly don't need a separately
-    maintained labels file."""
+    """Derive the flat, ordered Sprinzl label list expected by plot_heatmap.R
+    for --sprinzl, from the union of labels present in a seq_to_sprinzl TSV.
+    A mode that writes that TSV directly does not need a separately maintained
+    labels file."""
     df = pd.read_csv(seq_to_sprinzl, sep="\t")
     labels = {label for label in df["sprinzl"].astype(str) if label not in ("-", ".")}
     ordered = sorted(labels, key=_label_sort_key)
 
     os.makedirs(os.path.dirname(output) or ".", exist_ok=True)
     with open(output, "w") as f:
-        for label in ordered:
-            f.write(f"{label}\n")
+        f.writelines(f"{label}\n" for label in ordered)
 
 
 @cli.command()
@@ -234,10 +208,7 @@ def consensus_labels(labels, stk, output):
     aln_labels = []
     label_i = 0
     for s in ss:
-        if s in ["(", ")", "<", ">", "{", "}"]:
-            aln_labels.append(cl[label_i])
-            label_i += 1
-        elif s in [",", ":", "_", "-", "~"]:
+        if s in ["(", ")", "<", ">", "{", "}", ",", ":", "_", "-", "~"]:
             aln_labels.append(cl[label_i])
             label_i += 1
         elif s == ".":
@@ -250,7 +221,7 @@ def consensus_labels(labels, stk, output):
         raise Exception("Mismatch of Sprinzl labels and secondary structure consensus alignment!")
 
     with open(output, "w") as f:
-        f.write(f"aln_pos\tss\tlabel\n")
+        f.write("aln_pos\tss\tlabel\n")
         for i, (s, l) in enumerate(zip(ss, aln_labels)):
             f.write(f"{i}\t{s}\t{l}\n")
 
