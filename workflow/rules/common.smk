@@ -17,6 +17,9 @@ wildcard_constraints:
 # Default JACUSA2 score to use: label::score1+score2+... see add_scores.R
 DEFAULT_SCORE = "M_subsampled::norm_mismatch_score_subsampled"
 
+# seq is pep.yaml's declared default. pepschema does not apply it
+COORDS = pep.config["qutrna2"].get("coords", "seq")
+
 
 ########################################################################################################################
 
@@ -229,7 +232,7 @@ SUBSAMPLES = TBL["subsample_name"].tolist()
 
 # seq or sprinzl coordinates and use optional mods annotation
 SCORES = "scores"
-if pep.config["qutrna2"]["coords"] == "sprinzl":
+if COORDS == "sprinzl":
   SCORES += "_sprinzl"
 else:
   SCORES += "_seq"

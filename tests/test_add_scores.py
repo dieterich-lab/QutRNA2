@@ -1,8 +1,12 @@
-"""Unit tests for workflow/scripts/add_scores.R.
+"""test_add_scores.py - the empty-JACUSA2 error path of add_scores.R
 
-JACUSA2 writes a header and no rows when no position reaches min_cov in every
-replicate of both conditions. The error has to name that cause, since the
-reader otherwise reports only a line count.
+input:   a JACUSA2.out fixture that carries a header without data rows
+output:  pytest assertions
+usage:   pytest tests/test_add_scores.py
+env:     Rscript on PATH, from tests/conda_env_tests.yaml
+notes:   JACUSA2 emits only a header when min_cov is unreached in every
+         replicate of both conditions. The error has to name that cause,
+         since the reader otherwise reports only a line count
 """
 import os
 import shutil
@@ -26,7 +30,7 @@ def test_header_without_rows_names_min_cov(tmp_path):
     r = subprocess.run(
         ["Rscript", SCRIPT, "-s", "M::mismatch_score", "-o", str(out),
          str(j2)],
-        capture_output=True, text=True)
+        capture_output=True, text=True, check=False)
 
     assert r.returncode != 0
     assert "no data rows" in r.stderr

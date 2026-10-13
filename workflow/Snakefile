@@ -29,7 +29,7 @@ include: "rules/samtools.smk"
 if READS == "fastq" and "alignment" in config:
   include: "rules/parasail.smk"
 include: "rules/jacusa2.smk"
-if pep.config["qutrna2"]["coords"] == "sprinzl":
+if COORDS == "sprinzl":
   include: "rules/sec_structure.smk"
 include: "rules/plot.smk"
 include: "rules/info.smk"
@@ -115,7 +115,7 @@ if READS == "fastq":
 
 ########################################################################################################################
 
-if pep.config["qutrna2"]["coords"] == "sprinzl":
+if COORDS == "sprinzl":
   def target_sprinzl():
     return [
       SEQ_TO_SPRINZL_FINAL,]

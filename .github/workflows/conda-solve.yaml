@@ -1,12 +1,11 @@
 name: conda solve
 
-# pinned channels move upstream, so an edit that looks harmless can leave the
-# file unsolvable
+# catches an edit that cannot be resolved by the solver
 on:
   push:
-    paths: [conda.yaml]
+    paths: [conda.yaml, conda-lock-linux-64.yaml]
   pull_request:
-    paths: [conda.yaml]
+    paths: [conda.yaml, conda-lock-linux-64.yaml]
   workflow_dispatch:
 
 jobs:
@@ -15,3 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: $CONDA/bin/conda env create -f conda.yaml -n solve-check --dry-run
+
+      # the lockfile is the file installed by the container. pip entries
+      # are not checked
+      - run: $CONDA/bin/conda env create -f conda-lock-linux-64.yaml -n lock-check --dry-run

@@ -73,16 +73,6 @@ rule samtools_record_count:
   """
 
 
-rule samtools_multimapper:
-  input: "{prefix}.sorted.bam"
-  output: "{prefix}_stats/multimapper.txt"
-  conda: "qutrna2"
-  log: "logs/samtools/multimapper/{prefix}.log"
-  shell: """
-    python  {workflow.basedir}/scripts/bam_utils.py count-multimapper --output {output:q} {input:q} 2> {log:q}
-  """
-
-
 rule samtools_alignment_score:
   input: "{prefix}.sorted.bam"
   output: "{prefix}_stats/alignment_score.txt"

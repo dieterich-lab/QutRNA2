@@ -197,88 +197,95 @@ properties:
         default: {}
       default: {}
   plots:
-    read_length:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          opts:
-            type: string
-        required:
-          - id
-          - opts
-    record_count:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          opts:
-            type: string
-        required:
-          - id
-          - opts
-    threshold_summary:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          opts:
-            type: string
-        required:
-          - id
-          - opts
-    heatmap:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          title:
-            type: string
-          group:
-            type: string
-            enum: ["amino_acid", "anti_codon", "amnio_acid,anti_codon"]
-          score:
-            type: string
-            default: "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
-          harmonize_scaling:
-            type: string
-            default: NONE
-            pattern: ^NONE|MAX_SCORE|CONTRASTS|OVERALL|\d+(\.\d+)?$
-          trnas:
-            type: array
-            items:
+    type: object
+    properties:
+      read_length:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            id:
               type: string
-          positions:
-            type: array
-            items:
+            opts:
               type: string
-          conditions:
-            description: |
-              render only in contrasts naming one of these conditions; omit to
-              render in every contrast.
+          required:
+            - id
+            - opts
+      record_count:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            opts:
+              type: string
+          required:
+            - id
+            - opts
+      threshold_summary:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            opts:
+              type: string
+          required:
+            - id
+            - opts
+      heatmap:
+        type: array
+        default: []
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+            title:
+              type: string
+            group:
+              type: string
+              enum: ["amino_acid", "anti_codon", "amnio_acid,anti_codon"]
+            score:
+              type: string
+              default: "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
+            harmonize_scaling:
+              type: string
+              default: NONE
+              pattern: ^NONE|MAX_SCORE|CONTRASTS|OVERALL|\d+(\.\d+)?$
+            trnas:
+              type: array
+              items:
+                type: string
+            positions:
+              type: array
+              items:
+                type: string
+            conditions:
+              description: |
+                render only in contrasts naming one of these conditions; omit to
+                render in every contrast.
 
-                  conditions: [DNMT2]
+                    conditions: [DNMT2]
 
-              renders in wt vs DNMT2 and nowhere else.
-            type: array
-            items:
+                renders in wt vs DNMT2 and nowhere else.
+              type: array
+              items:
+                type: string
+            opts:
               type: string
-          opts:
-            type: string
-        default: {}
-        required:
-          - id
-          - group
-          - score
-          - harmonize_scaling
+          default: {}
+          # group is optional: plot.smk:96 tests for it
+          required:
+            - id
+            - score
+            - harmonize_scaling
+    default: {}
   call_filtered:
     type: boolean
     default: false
