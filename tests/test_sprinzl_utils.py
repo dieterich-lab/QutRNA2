@@ -3,28 +3,12 @@
 input:   TSV fixtures written under tmp_path
 output:  pytest assertions
 usage:   pytest tests/test_sprinzl_utils.py
-env:     none
-notes:   covers the parts that run without an external tool. Heatmap column
-         order is decided by label order, and the sprinx conversion feeds it
+env:     pysam and pandas, plus biopython for the Stockholm reader
 """
 import csv
-import importlib.util
-import os
-import sys
 
-SCRIPTS = os.path.join(os.path.dirname(__file__), "..", "workflow", "scripts")
-
-
-def _load(name):
-    path = os.path.join(SCRIPTS, f"{name}.py")
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-sprinzl_utils = _load("sprinzl_utils")
+import pytest
+import sprinzl_utils
 
 
 def test_labels_sort_in_5p_to_3p_order():
@@ -39,10 +23,17 @@ def test_labels_sort_in_5p_to_3p_order():
         "46", "60", "60A", "60Z", "60AA", "76"]
 
 
+def test_an_unrecognised_label_is_named_in_the_error():
+    """_label_sort_key('ins3') raises ValueError. 'ins3' is in the message.
+    Label shapes keep arriving from sprinx."""
+    with pytest.raises(ValueError, match="ins3"):
+        sprinzl_utils._label_sort_key("ins3")
+
+
 def test_sprinx_conversion_normalizes_case_and_indexing(tmp_path):
-    """sprinx writes 0-based indices and lowercase insertion codes. 1-based
-    seq_pos and 17A/20B are expected downstream, with 'e' labels left alone. A position
-    that could not be labelled by sprinx does not get a row."""
+    """0-based indices and lowercase insertion codes are written by sprinx.
+    1-based seq_pos and 17A/20B are expected downstream. An 'e' label is left
+    alone. Only a labelled position gets a row."""
     src, out = tmp_path / "sprinx.tsv", tmp_path / "seq_to_sprinzl.tsv"
     with open(src, "w", newline="") as fh:
         w = csv.writer(fh, delimiter="\t", lineterminator="\n")
@@ -62,7 +53,7 @@ def test_sprinx_conversion_normalizes_case_and_indexing(tmp_path):
 
 
 def test_derived_labels_are_ordered_and_skip_blanks(tmp_path):
-    """A '-' blanks a position out of the plot rather than naming a coordinate."""
+    """A '-' blanks a position out of the plot."""
     src, out = tmp_path / "seq_to_sprinzl.tsv", tmp_path / "labels.txt"
     with open(src, "w", newline="") as fh:
         w = csv.writer(fh, delimiter="\t", lineterminator="\n")

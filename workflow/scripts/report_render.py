@@ -1,9 +1,12 @@
-"""Render the HTML report from a Jinja template.
+"""report_render.py - render the HTML run report from a Jinja template
 
-Plots are inlined as base64 so the result is one file that can be attached to
-an email or dropped in a shared folder.
-
-usage: python report_render.py --params params.yaml --output report.html template.jinja
+input:   a Jinja template, and a params YAML of template variables
+output:  one self-contained HTML file at --output
+usage:   report_render.py --params params.yaml --output report.html TEMPLATE
+env:     click and jinja2, plus pyyaml for the params file
+notes:   three filters are registered on the environment. a plot is inlined
+         as base64 by embed. the pdf beside a png is named by pdf. a value is
+         rendered as yaml text by to_yaml
 """
 import base64
 import mimetypes
@@ -17,8 +20,8 @@ import yaml
 def embed(path):
     """<img> tag with the file inlined, or a placeholder when it is absent.
 
-    A missing plot is reported in the page rather than raised, so one failed
-    plot does not cost the whole report.
+    A missing plot appears in the page as text. Every plot that reached the
+    template is rendered.
     """
     if not path or not os.path.exists(path):
         return f'<p class="missing">missing: {path}</p>'
@@ -32,8 +35,8 @@ def embed(path):
 def pdf(path):
     """Absolute path of the pdf written next to a rendered png.
 
-    Absolute, because the report is read from wherever it was copied to, while
-    the pdf stays where the run wrote it.
+    The path is absolute because the report is read from anywhere. The pdf
+    itself stays in the run directory.
     """
     if not path:
         return ""

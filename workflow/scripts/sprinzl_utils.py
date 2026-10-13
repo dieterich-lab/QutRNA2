@@ -49,6 +49,8 @@ def _label_sort_key(label):
             rank, order = 2, -int(d2)     # e21..e27: 3' stem, reverse order
         return (45, 1, rank, order, len(suffix), suffix)
     m = re.match(r"(\d+)([A-Za-z]*)", label)
+    if m is None:
+        raise ValueError(f"unrecognised Sprinzl label: {label!r}")
     num, suffix = m.group(1), m.group(2)
     return (int(num), 0, 0, 0, len(suffix), suffix)
 
@@ -57,8 +59,10 @@ def _label_sort_key(label):
 @cli.command("check-sprinx-headers")
 @click.argument("fasta", type=click.Path(exists=True))
 def check_sprinx_headers(fasta):
-    """Fail fast if any header in FASTA can't be parsed for anticodon/aa by
-    sprinx, rather than letting the whole sprinx run degrade silently."""
+    """Raise unless an anticodon and amino acid are read from every header.
+
+    An unparsed header is skipped in silence by sprinx itself.
+    """
     from Bio import SeqIO
     from sprinx.common import header_to_aa, header_to_anticodon
 
@@ -91,7 +95,7 @@ def sprinx_to_seq_to_sprinzl(sprinx_tsv, output):
     with open(sprinx_tsv, newline="") as f:
         for row in csv.DictReader(f, delimiter="\t"):
             label = row["sprinzl_position"].strip()
-            if not label:            # unlabeled position; nothing to map
+            if not label:
                 continue
             seq_id = row["seq_id"]
             if seq_id not in by_id:

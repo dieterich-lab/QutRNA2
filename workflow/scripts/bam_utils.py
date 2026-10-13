@@ -323,6 +323,10 @@ def adapter_overlap(bam,
     in_samfile.close()
 
 
+class CigarError(Exception):
+    """Raised for a back, skip or pad operation in a cigar."""
+
+
 def trim_cigar_helper(cigar):
     aln_offset = 0
     for i, (op, l) in enumerate(cigar):
@@ -330,21 +334,17 @@ def trim_cigar_helper(cigar):
             break
 
         match op:
-            case pysam.CBACK:
-                raise Exception()
+            case pysam.CBACK | pysam.CREF_SKIP | pysam.CPAD:
+                raise CigarError(f"unsupported cigar op {op}")
             case pysam.CDIFF:
                 cigar[i] = (pysam.CSOFT_CLIP, l)
                 aln_offset += l
-            case pysam.CREF_SKIP:
-                raise Exception()
             case pysam.CDEL:
                 cigar[i] = ()
                 aln_offset += l
             case pysam.CINS:
+                # query alone is consumed by an insertion. aln_offset stays put
                 cigar[i] = (pysam.CSOFT_CLIP, l)
-                #aln_offset += l
-            case pysam.CPAD:
-                raise Exception()
 
     return cigar, aln_offset
 
@@ -353,8 +353,8 @@ def do_trim_cigar(record):
     try:
         new_cigar, aln_offset = trim_cigar_helper(list(record.cigartuples))
         new_cigar, _ = trim_cigar_helper(list(reversed(new_cigar)))
-    except:
-        raise Exception(record)
+    except CigarError as err:
+        raise CigarError(f"{record.query_name}: {err}") from err
     new_cigar = tuple(c for c in reversed(new_cigar) if c)
 
     # merge consecutive OPs, e.g.:10S10S
@@ -368,7 +368,8 @@ def do_trim_cigar(record):
             current = [op, l]
     merged_cigar.append(current)
     new_cigar = tuple((c[0], c[1]) for c in merged_cigar)
-    if new_cigar != record.cigartuples:
+    # record.cigartuples is a list. A tuple is built by the merge above
+    if new_cigar != tuple(record.cigartuples):
         record.cigartuples = new_cigar
         if aln_offset:
             record.reference_start += aln_offset
