@@ -44,7 +44,7 @@ POSITION_CHUNK = 250
 # 25 keeps a short file above one chunk per process
 CHUNK = 25
 DRAWS = 1000
-MIN_R = 0.99
+MIN_R = 0.95
 
 # JACUSA2's own score column, and the prefix of its count columns
 ERROR_TYPES = {
