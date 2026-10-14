@@ -274,6 +274,8 @@ def exact_tail(pooled, counts1, observed, scorer, limit=SPLIT_LIMIT):
     Returns the p and the re-split count. A count of zero marks a position left
     to the sampler.
     """
+    # counts arrive float for the scorer. the pmf below takes integers only
+    pooled = pooled.astype(np.int64)
     pvalue = np.full(len(pooled), np.nan)
     n_splits = np.zeros(len(pooled), dtype=np.int64)
 
