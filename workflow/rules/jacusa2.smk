@@ -92,11 +92,13 @@ rule jacusa2_permutation:
   log: "logs/jacusa2/permutation/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.log"
   benchmark: repeat("benchmarks/jacusa2/permutation/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.txt", config.get("_benchmark_repeats", 1))
   threads: workflow.cores
-  params: fdr=config["jacusa2"]["fdr"]
+  params: permutation=config["jacusa2"]["permutation"]
   shell: """
     python {workflow.basedir:q}/scripts/add_permutation_scores.py \
-        --seed 42 \
-        --fdr {params.fdr} \
+        --seed {params.permutation[seed]} \
+        --min-permutations {params.permutation[min_permutations]} \
+        --min-higher-scoring {params.permutation[min_higher_scoring]} \
+        --max-permutations {params.permutation[max_permutations]} \
         --processes {threads} \
         -o {output:q} \
         {input:q} > {log:q} 2>&1

@@ -7,7 +7,8 @@ usage:   python add_permutation_scores.py JACUSA2.out -o perm.tsv --seed 42
 env:     python3 with numpy, scipy, pandas. JACUSA2 is not called
 notes:   new columns are perm_<type>_<name>. type is mismatch, deletion or
          insertion. name is score, score_minus_max_null, pvalue, fdr,
-         p_exact, n_splits or n_permutations
+         p_exact, n_splits or n_permutations. n_splits counts the possible
+         read splits where p is exact, and is 0 where p is drawn
 """
 import itertools
 import os
@@ -34,18 +35,22 @@ INDEL_PSEUDOCOUNT = 1.0
 
 # one fit call over many positions pays the setup once, and bounds memory
 BATCH_TABLES = 250_000
-# the slack keeps the observed split inside its own tail
+# a split scoring the same as the observed data counts as at or above it,
+# whatever the float rounding
 TIE_TOLERANCE = 1e-9
-POSITION_CHUNK = 250
-# 25 keeps a short file above one chunk per process
+# positions per task. 25 gives even a short input more tasks than processes.
+# not a flag, since each task's seed is the seed plus its task index
 CHUNK = 25
-# also the table count up to which a position is enumerated, and the
-# permutations the normalized score reads, as JACUSA2's subsampleRuns=1000
-DRAWS = 1000
-# each round multiplies the permutations of the tests none has reached
+# also the possible read splits up to which p is exact, and the permutations
+# whose highest score score_minus_max_null subtracts
+MIN_PERMUTATIONS = 1000
+# a site draws until this many permutations score at or above its observed
+# score, or until MAX_PERMUTATIONS. Besag and Clifford 1991
+MIN_HIGHER_SCORING = 10
+MAX_PERMUTATIONS = 100_000
+SEED = 42
+# each round multiplies a site's permutation count by this
 REDRAW = 10
-# the heatmap's call cutoff, which also ends the rounds
-FDR = 0.05
 
 # the prefix of JACUSA2's count columns
 ERROR_TYPES = {
@@ -66,7 +71,7 @@ class InputError(Exception):
 # lib/estimate/MinkaEstimateDirMultAlpha.java over all positions at once
 
 
-# the cap matches the Java the port is diffed against
+# JACUSA2's Java, which this port is checked against, has the same cap
 def error_prob(qual):
     """Convert a Phred score to an error probability. Caps at MAX_Q."""
     return 10.0 ** (-min(qual, MAX_Q) / 10.0)
@@ -120,7 +125,7 @@ def _invalid(alpha):
 def _newton_step(alpha, data, *, backtrack):
     """Run one Minka iteration.
 
-    Returns the proposed alpha, and a mask marking the positions that lack an
+    Returns the proposed alpha, and a mask marking the positions that lack a
     valid alpha.
     """
     replicates = data.shape[1]
@@ -256,14 +261,15 @@ def scorer_for(error_type, qual):
 # pool the reads of every replicate at one position
 # permute them back to each replicate at its own depth, without replacement
 # read the observed score against the scores of the permutations
+# a table, or read split, is one such assignment, (R, K) counts
 
 
 def enumerate_splits(pooled, size, limit):
-    """Every distinct re-split of one position, as (S, K). Past limit, None.
+    """Every way to take `size` reads from the pooled counts, as (S, K).
 
-    Categories are added one at a time. A partial vector survives while it has
-    spent at most the group and the rest can still fill it, so every surviving
-    prefix completes.
+    Returns None past limit. Categories are added one at a time. A partial
+    vector is kept while it holds at most `size` reads and the categories
+    still to come can make up the rest.
     """
     pooled = np.asarray(pooled, dtype=np.int64)
     fillable = np.concatenate([np.cumsum(pooled[::-1])[::-1][1:], [0]])
@@ -411,14 +417,14 @@ def score_tables(permuted, first, scorer):
         positions, draws)
 
 
-def permutation_test(conditions, scorer, seed, draws=DRAWS):
+def permutation_test(conditions, scorer, seed, draws=MIN_PERMUTATIONS):
     """Score every position against permutations of its own reads.
 
     conditions is the two conditions' counts, each (N, R, K), one row per
     replicate. scorer comes from scorer_for and scores observed and null.
 
     The p is exact where at most `draws` tables exist, and drawn elsewhere.
-    reached counts the permutations at or above the observed score, for
+    n_higher counts the permutations at or above the observed score, for
     redraw to extend.
     """
     counts1, counts2 = conditions
@@ -428,85 +434,106 @@ def permutation_test(conditions, scorer, seed, draws=DRAWS):
     observed, _ = scorer(counts1, counts2)
     pvalue, n_splits = exact_tail(counts, first, observed, scorer, draws)
 
-    null_max = np.full(len(counts), np.nan)
-    reached = np.zeros(len(counts), dtype=np.int64)
-    for start in range(0, len(counts), POSITION_CHUNK):
-        block = slice(start, start + POSITION_CHUNK)
-        null = score_tables(permute_reads(counts[block], rng, draws), first,
-                            scorer)
-        null_max[block] = null.max(-1)
-        reached[block] = (null >= observed[block][:, None]).sum(-1)
-
+    null = score_tables(permute_reads(counts, rng, draws), first, scorer)
+    n_higher = (null >= observed[:, None]).sum(-1)
     drawn = n_splits == 0
-    pvalue[drawn] = (1 + reached[drawn]) / (draws + 1)
+    pvalue[drawn] = (1 + n_higher[drawn]) / (draws + 1)
 
     return {"score": observed,
-            "score_minus_max_null": np.clip(observed - null_max, 0.0, None),
+            "score_minus_max_null": np.clip(observed - null.max(-1), 0.0,
+                                            None),
             "pvalue": pvalue, "n_splits": n_splits, "p_exact": n_splits > 0,
-            "n_permutations": np.where(drawn, draws, 0), "reached": reached}
+            "n_permutations": np.where(drawn, draws, 0), "n_higher": n_higher}
 
 
-def count_reached(task):
+def count_higher(task):
     """Permutations at or above the observed score, per position, for one batch.
 
-    Returns the error type with the counts, for the caller to add up.
+    Returns the error type, the batch offset, the count per site, and the
+    0-based index in the batch of each of the first `min_higher` such
+    permutations, -1 where the batch holds fewer.
     """
-    counts, first, observed, error_type, qual, draws, seed = task
+    (counts, first, observed, error_type, qual, draws, seed, done,
+     min_higher) = task
     null = score_tables(permute_reads(counts, np.random.default_rng(seed),
                                       draws), first, scorer_for(error_type, qual))
+    hits = (null >= observed[:, None]).cumsum(-1)
+    order = np.arange(1, min_higher + 1)
+    index = (hits[:, :, None] >= order).argmax(1)
 
-    return error_type, (null >= observed[:, None]).sum(-1)
+    return error_type, done, hits[:, -1], np.where(hits[:, -1:] >= order,
+                                                   index, -1)
 
 
 def redraw(results, conditions, args, mapper):
-    """Extend the drawn tests that no permutation reaches, in place.
+    """Draw more permutations for sites with too few scoring at or above them.
 
-    Each round gives them REDRAW times their permutations, until their FDR
-    is below args.fdr. Their p then changes no call. conditions maps each
-    error type to its two conditions' counts.
+    A site stops at the permutation that brings the count scoring at or
+    above its observed score to args.min_higher_scoring, with p = that count
+    / permutations drawn. Otherwise it stops at args.max_permutations, with
+    p = (count + 1) / (permutations + 1). A site with enough such
+    permutations among the first draws keeps its p. Updates results in
+    place. conditions maps each error type to its counts.
     """
+    min_higher = args.min_higher_scoring
     for round_ in itertools.count(1):
-        rates = np.split(false_discovery_control(np.concatenate(
-            [r["pvalue"] for r in results.values()]), method="bh"),
-            len(results))
-        unreached = {t: np.flatnonzero((r["n_permutations"] > 0)
-                                       & (r["reached"] == 0))
-                     for t, r in results.items()}
-        worst = max((rate[unreached[t]].max() for t, rate
-                     in zip(results, rates) if unreached[t].size), default=0)
-        if worst < args.fdr:
+        drawing = {t: np.flatnonzero((r["n_permutations"] > 0)
+                                     & (r["n_higher"] < min_higher)
+                                     & (r["n_permutations"]
+                                        < args.max_permutations))
+                   for t, r in results.items()}
+        drawing = {t: again for t, again in drawing.items() if again.size}
+        if not drawing:
             return
 
         started = time.monotonic()
-        tasks = []
-        for error_type, again in unreached.items():
-            if not again.size:
-                continue
+        tasks, extra = [], {}
+        for error_type, again in drawing.items():
             result = results[error_type]
             first = conditions[error_type][0].shape[1]
             counts = np.concatenate(conditions[error_type], axis=1)[again]
-            observed = result["score"][again]
-            extra = result["n_permutations"][again[0]] * (REDRAW - 1)
+            total = result["n_permutations"][again[0]]
+            extra[error_type] = min(total * (REDRAW - 1),
+                                    args.max_permutations - total)
             # batches of at most BATCH_TABLES tables bound the memory, and a
             # fixed batch keeps the result the same at any process count
             batch = max(1, BATCH_TABLES // again.size)
             seed = [args.seed, list(ERROR_TYPES).index(error_type), round_]
-            tasks += [(counts, first, observed, error_type, args.qual,
-                       min(batch, extra - done), [*seed, done])
-                      for done in range(0, extra, batch)]
-        print(f"round {round_}: {sum(map(len, unreached.values())):,} tests "
-              f"no permutation reaches, FDR up to {worst:.3g}; {len(tasks):,} "
+            tasks += [(counts, first, result["score"][again], error_type,
+                       args.qual, min(batch, extra[error_type] - done),
+                       [*seed, done], done, min_higher)
+                      for done in range(0, extra[error_type], batch)]
+        print(f"round {round_}: {sum(map(len, drawing.values())):,} tests "
+              f"with fewer than {min_higher} permutations at or above the "
+              f"observed score; {len(tasks):,} "
               "batches", flush=True)
 
-        for error_type, reached in mapper(count_reached, tasks):
-            results[error_type]["reached"][unreached[error_type]] += reached
-        for error_type, again in unreached.items():
+        parts = {t: [] for t in drawing}
+        for error_type, *part in mapper(count_higher, tasks):
+            parts[error_type].append(part)
+        stopped = 0
+        for error_type, again in drawing.items():
             result = results[error_type]
-            result["n_permutations"][again] *= REDRAW
-            result["pvalue"][again] = ((1 + result["reached"][again])
-                                       / (result["n_permutations"][again] + 1))
+            total = result["n_permutations"][again[0]]
+            # 1-based permutation number of each one at or above, sorted
+            draw = np.sort(np.concatenate(
+                [np.where(index >= 0, total + done + index + 1, np.inf)
+                 for done, _, index in parts[error_type]], axis=1), axis=1)
+            need = min_higher - result["n_higher"][again]
+            at = draw[np.arange(again.size), need - 1]
+            result["n_higher"][again] += sum(h for _, h, _ in parts[error_type])
+            done_now = np.isfinite(at)
+            stopped += int(done_now.sum())
+
+            n = np.where(done_now, at, total + extra[error_type]).astype(int)
+            result["n_permutations"][again] = n
+            result["pvalue"][again] = np.where(
+                done_now, min_higher / n,
+                (1 + result["n_higher"][again]) / (n + 1))
         print(f"round {round_} done in "
-              f"{(time.monotonic() - started) / 60:.1f} min", flush=True)
+              f"{(time.monotonic() - started) / 60:.1f} min, {stopped:,} tests "
+              f"stopped at {min_higher} permutations at or above",
+              flush=True)
 
 
 # ------------------------------------------------------------ the input file
@@ -542,34 +569,18 @@ def read_quality(command):
     return int(quality.group(1)) if quality else None
 
 
-def count_replicates(columns):
-    """Replicates per condition, as {condition: count}, read off bases<c><r>."""
-    replicates = {}
-    for column in columns:
-        found = re.fullmatch(r"bases(\d)(\d+)", column)
-        if found:
-            condition = int(found.group(1))
-            replicates[condition] = replicates.get(condition, 0) + 1
+def check_columns(columns):
+    """Raise InputError unless there are two conditions and every count column.
 
-    return replicates
-
-
-def check_shape(columns):
-    """Raise InputError unless the result has two conditions."""
-    found = sorted(count_replicates(columns))
+    Conditions are read off the bases<condition><replicate> columns.
+    """
+    found = sorted({int(c[5]) for c in columns
+                    if re.fullmatch(r"bases\d\d+", c)})
     if found != [1, 2]:
         raise InputError(f"expected two conditions, found {found or 'none'}.")
 
-
-def check_columns(columns, error_types):
-    """Raise InputError naming the -f option when a needed column is absent."""
-    needed = {"bases11", "bases21"}
-    for error_type in error_types:
-        counts = ERROR_TYPES[error_type]
-        needed |= {f"{counts}11", f"{counts}21"}
-        if error_type != "mismatch":
-            needed |= {"deletions11", "deletions21"}
-
+    needed = {f"{counts}{c}1" for counts in ERROR_TYPES.values()
+              for c in (1, 2)}
     missing = sorted(needed - set(columns))
     if missing:
         raise InputError(f"missing columns: {', '.join(missing)}. The call-2 "
@@ -593,7 +604,7 @@ def counts_for(table, error_type):
     conditions = []
     for condition in (1, 2):
         rows = []
-        for name in replicates(table, "bases", condition):
+        for name in table.filter(regex=rf"^bases{condition}\d+$").columns:
             bases = acgt(table[name])
             if error_type != "mismatch":
                 replicate = name.removeprefix("bases")
@@ -605,12 +616,6 @@ def counts_for(table, error_type):
         conditions.append(np.stack(rows, axis=1))
 
     return tuple(conditions)
-
-
-def replicates(table, prefix, condition):
-    """The column names <prefix><condition><replicate>."""
-    return [c for c in table.columns
-            if re.fullmatch(rf"{prefix}{condition}\d+", c)]
 
 
 def read_table(path, columns):
@@ -649,9 +654,9 @@ def permute(conditions, error_type, args, mapper):
     numbers.
     """
     first, second = conditions
-    tasks = [(n, first[i:i + args.chunk], second[i:i + args.chunk], args.draws,
-              args.seed + n, error_type, args.qual)
-             for n, i in enumerate(range(0, len(first), args.chunk))]
+    tasks = [(n, first[i:i + CHUNK], second[i:i + CHUNK],
+              args.min_permutations, args.seed + n, error_type, args.qual)
+             for n, i in enumerate(range(0, len(first), CHUNK))]
 
     started = time.monotonic()
     results = [None] * len(tasks)
@@ -670,36 +675,33 @@ def parse_args():
     )
     parser.add_argument("jacusa2_out", help="a JACUSA2 call-2 output file")
     parser.add_argument("-o", "--output", required=True, help="TSV to write")
-    parser.add_argument("--seed", type=int, required=True,
-                        help="seeds the drawn re-splits")
+    parser.add_argument("--seed", type=int, default=SEED,
+                        help=f"seeds the permutations, default {SEED}")
     parser.add_argument("--qual", type=int,
                         help="base quality the mismatch pseudocounts "
                              "assume, taken from the -Q in the file's header "
                              "when left out")
-    parser.add_argument("--error-types", default="mismatch,deletion,insertion",
-                        help="comma separated, default all three")
-    parser.add_argument("--draws", type=int, default=DRAWS,
-                        help="permutations drawn per position, and the table "
-                             f"count up to which p is exact, default {DRAWS}")
-    parser.add_argument("--fdr", type=float, default=FDR,
-                        help=f"the call cutoff. tests no permutation reaches "
-                             f"get rounds of {REDRAW}x more until their FDR "
-                             f"is below it, default {FDR}")
-    parser.add_argument("--chunk", type=int, default=CHUNK,
-                        help=f"positions per task, default {CHUNK}")
+    parser.add_argument("--min-permutations", type=int,
+                        default=MIN_PERMUTATIONS,
+                        help="permutations drawn for every site, default "
+                             f"{MIN_PERMUTATIONS}. A site with at most this "
+                             "many possible read splits gets an exact p "
+                             "instead, and score_minus_max_null subtracts "
+                             "the highest of this many permuted scores")
+    parser.add_argument("--min-higher-scoring", type=int,
+                        default=MIN_HIGHER_SCORING,
+                        help="draw permutations for a site until this many "
+                             "score at or above its observed score, up to "
+                             "--max-permutations, default "
+                             f"{MIN_HIGHER_SCORING}")
+    parser.add_argument("--max-permutations", type=int,
+                        default=MAX_PERMUTATIONS,
+                        help=f"rounds of {REDRAW}x more permutations stop at "
+                             f"this many, default {MAX_PERMUTATIONS:,}")
     parser.add_argument("--processes", type=int, default=os.cpu_count(),
                         help="default every core. the result is the same at "
                              "any number")
-    args = parser.parse_args()
-
-    args.error_types = [t.strip() for t in args.error_types.split(",")
-                        if t.strip()]
-    unknown = sorted(set(args.error_types) - set(ERROR_TYPES))
-    if unknown:
-        parser.error(f"unknown error type(s): {', '.join(unknown)}. "
-                     f"Choose from {', '.join(ERROR_TYPES)}.")
-
-    return parser, args
+    return parser, parser.parse_args()
 
 
 def main():
@@ -708,8 +710,7 @@ def main():
 
     try:
         command, columns = read_header(args.jacusa2_out)
-        check_shape(columns)
-        check_columns(columns, args.error_types)
+        check_columns(columns)
     except InputError as problem:
         sys.exit(f"{parser.prog}: {problem}")
 
@@ -727,21 +728,20 @@ def main():
     dropped = [c for c in out.columns if c.endswith("_subsampled")]
     out = out.drop(columns=dropped)
 
-    print(f"{len(out):,} positions, {args.draws} draws, -Q {args.qual}, "
-          f"{len(args.error_types)} error type(s), "
-          f"{args.processes} process(es)",
-          flush=True)
+    print(f"{len(out):,} positions, {args.min_permutations} to "
+          f"{args.max_permutations:,} permutations, -Q {args.qual}, "
+          f"{args.processes} process(es)", flush=True)
     if dropped:
         print(f"dropped {', '.join(dropped)}", flush=True)
 
-    conditions = {t: counts_for(out, t) for t in args.error_types}
+    conditions = {t: counts_for(out, t) for t in ERROR_TYPES}
     with Pool(args.processes) if args.processes > 1 else nullcontext() as pool:
         mapper = pool.imap_unordered if pool else map
         results = {t: permute(conditions[t], t, args, mapper)
-                   for t in args.error_types}
+                   for t in ERROR_TYPES}
         redraw(results, conditions, args, mapper)
-    # one BH family over every error type. MDI calls a position when any of
-    # its tests passes, and needs no second correction
+    # one BH family over every error type. a position is called on its
+    # lowest FDR from this one correction
     pvalues = np.concatenate([r["pvalue"] for r in results.values()])
     rates = np.split(false_discovery_control(pvalues, method="bh"),
                      len(results))

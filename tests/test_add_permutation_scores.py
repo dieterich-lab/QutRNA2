@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from add_permutation_scores import (
+    MIN_HIGHER_SCORING,
     REDRAW,
     counts_for,
     enumerate_splits,
@@ -54,25 +55,32 @@ def test_the_margin_is_the_score_above_the_null(result):
     assert np.all(result["score_minus_max_null"] >= 0)
 
 
-def test_rounds_stop_once_the_unreached_test_passes_the_fdr():
-    # BH over 2 tests gives FDR 2 / (5000 + 1), the first below 0.001
-    strong = (np.array([[[400, 0, 0, 0]], [[500, 50, 50, 50]]], dtype=float),
-              np.array([[[0, 0, 0, 400]], [[500, 50, 50, 50]]], dtype=float))
-    results = {"mismatch": permutation_test(strong, SCORER, seed=42,
+def test_a_site_draws_until_enough_score_higher_or_the_maximum():
+    # permutations at or above the observed score: 0 of 5000 at site 0, and
+    # 2 and 13 of the first 50 at sites 1 and 2
+    sites = (np.array([[[400, 0, 0, 0]], [[100, 10, 5, 5]], [[100, 10, 5, 5]]],
+                      dtype=float),
+             np.array([[[0, 0, 0, 400]], [[85, 25, 5, 5]], [[90, 20, 5, 5]]],
+                      dtype=float))
+    results = {"mismatch": permutation_test(sites, SCORER, seed=42,
                                             draws=DRAWS)}
-    args = SimpleNamespace(fdr=0.001, seed=42, qual=20)
-    redraw(results, {"mismatch": strong}, args, map)
-    found = results["mismatch"]
-    assert found["n_permutations"].tolist() == [DRAWS * REDRAW ** 2, DRAWS]
-    assert found["pvalue"][0] == 1 / (DRAWS * REDRAW ** 2 + 1)
+    first = results["mismatch"]["pvalue"][2]
+    maximum = DRAWS * REDRAW ** 2
+    args = SimpleNamespace(max_permutations=maximum, seed=42, qual=20,
+                           min_higher_scoring=MIN_HIGHER_SCORING)
+    redraw(results, {"mismatch": sites}, args, map)
+    n, p = (results["mismatch"][k] for k in ("n_permutations", "pvalue"))
+    assert n[0] == maximum and p[0] == 1 / (maximum + 1)
+    assert DRAWS < n[1] < maximum and p[1] == MIN_HIGHER_SCORING / n[1]
+    assert n[2] == DRAWS and p[2] == first
 
 
-def test_a_site_some_permutations_reach_keeps_the_first_draws():
+def test_a_site_with_permutations_scoring_higher_keeps_the_first_draws():
     same = np.array([[[500, 50, 50, 50]]], dtype=float)
     found = permutation_test((same, same), SCORER, seed=42, draws=DRAWS)
     assert found["n_permutations"][0] == DRAWS
-    reached = found["pvalue"][0] * (DRAWS + 1) - 1
-    assert reached > 0 and np.isclose(reached, round(reached))
+    n_higher = found["pvalue"][0] * (DRAWS + 1) - 1
+    assert n_higher > 0 and np.isclose(n_higher, round(n_higher))
 
 
 def test_replicates_stay_separate_through_the_test():

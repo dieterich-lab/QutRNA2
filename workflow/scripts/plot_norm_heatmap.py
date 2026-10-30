@@ -1,12 +1,12 @@
 """plot_norm_heatmap.py - a heatmap from the permutation output alone
 
-input:   the tsv add_permutation_scores.py writes, one row per position
+input:   the tsv that add_permutation_scores.py writes, one row per position
 output:  --out, a pdf with tRNAs down the page and positions across
 usage:   python plot_norm_heatmap.py WT_KO.perm.tsv --out heatmap.pdf
 env:     python3 with numpy, pandas, matplotlib
-notes:   a position is called on its lowest FDR. a tile's colour is
-         the summed score minus max null, and its size says whether the FDR
-         is below --fdr. a position the tRNA lacks is drawn grey. --sprinzl
+notes:   a position is called on its lowest FDR. a tile's colour is the
+         observed score minus the highest permutation score, summed over
+         the three error types. its size says whether the FDR is below --fdr. a position that the tRNA lacks is drawn grey. --sprinzl
          renames the positions, --trnas keeps a subset, --mark draws a red box
 """
 import re
@@ -53,12 +53,12 @@ def coverage(table, condition):
     return bases.groupby(level=0).sum() + deletions
 
 
-def scored(table, gate):
+def scored(table, fdr):
     """Add the normalized score and whether the position is called."""
     rates = table[[f"perm_{t}_fdr" for t in TYPES]]
     margins = table[[f"perm_{t}_score_minus_max_null" for t in TYPES]]
     return table.assign(norm_score=margins.sum(axis=1),
-                        called=rates.min(axis=1) < gate,
+                        called=rates.min(axis=1) < fdr,
                         position=table.start + 1,
                         coverage1=coverage(table, 1),
                         coverage2=coverage(table, 2))
@@ -185,7 +185,7 @@ def coverage_bars(fig, bars, table, trnas, conditions):
                 handletextpad=.5)
 
 
-def key_band(fig, ax, scale, gate):
+def key_band(fig, ax, scale, fdr):
     """The score bar and the two tile sizes, centred over the panel."""
     width, height = fig.get_figwidth() * 72, fig.get_figheight() * 72
     box = ax.get_position()
@@ -216,7 +216,7 @@ def key_band(fig, ax, scale, gate):
             spot(at - side / 2, KEY_Y - side / 2, side, side)[:2],
             side / width, side / height, facecolor="none", edgecolor=AXIS,
             linewidth=.7))
-        label = f"FDR {sign} {gate}"
+        label = f"FDR {sign} {fdr}"
         text(at + KEY_GAP, KEY_Y + 2.4, label)
         at += KEY_GAP + text_width([label], TICK) + KEY_GAP
 

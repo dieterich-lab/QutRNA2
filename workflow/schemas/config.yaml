@@ -119,8 +119,29 @@ properties:
         default: 10
       fdr:
         type: number
-        description: FDR below which a site is called on the normalized heatmap. Tests no permutation reaches get more permutations until they pass it
+        description: FDR below which a site is called on the normalized heatmap
         default: 0.05
+      permutation:
+        type: object
+        description: Settings of the permutation test in add_permutation_scores.py
+        properties:
+          seed:
+            type: integer
+            description: Seed of the random permutations
+            default: 42
+          min_permutations:
+            type: integer
+            description: Permutations drawn for every site. A site with at most this many possible read splits gets an exact p instead, and score_minus_max_null subtracts the highest of this many permuted scores
+            default: 1000
+          min_higher_scoring:
+            type: integer
+            description: Draw permutations for a site until this many score at or above its observed score, up to max_permutations
+            default: 10
+          max_permutations:
+            type: integer
+            description: The most permutations a site gets. Its smallest possible p is 1 / (max_permutations + 1)
+            default: 100000
+        default: {}
     default: {}
   cmalign:
     type: object
