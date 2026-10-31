@@ -1,7 +1,8 @@
 """plot_norm_heatmap.py - a heatmap from the permutation output alone
 
 input:   the tsv that add_permutation_scores.py writes, one row per position
-output:  --out, a pdf with tRNAs down the page and positions across
+output:  --out, a pdf with tRNAs down the page and positions across, and
+         the same page as a png beside it for the report
 usage:   python plot_norm_heatmap.py WT_KO.perm.tsv --out heatmap.pdf
 env:     python3 with numpy, pandas, matplotlib
 notes:   a position is called on its lowest FDR. a tile's colour is the
@@ -9,6 +10,7 @@ notes:   a position is called on its lowest FDR. a tile's colour is the
          the three error types. its size says whether the FDR is below --fdr. a position that the tRNA lacks is drawn grey. --sprinzl
          renames the positions, --trnas keeps a subset, --mark draws a red box
 """
+import os
 import re
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
@@ -289,6 +291,7 @@ def main():
     key_band(fig, ax, scale, args.fdr)
     # the page is already the size the margins define, and tight would resize it
     fig.savefig(args.out)
+    fig.savefig(os.path.splitext(args.out)[0] + ".png", dpi=150)
     called = int(table.called.sum())
     print(f"wrote {args.out}: {len(trnas)} tRNAs, {len(positions)} positions, "
           f"{called:,} of {len(table):,} called at FDR < {args.fdr}")

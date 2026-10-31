@@ -47,8 +47,19 @@ def _report_create_params(wildcards):
       cond1=cond1, cond2=cond2,
       plot_id=[plot["id"] for plot in heatmap_plots(cond1, cond2)],
       bam_type=bam_types))
+  targets.extend(flatten_dict(get_normalized_heatmaps()))
 
   return targets
+
+
+def get_normalized_heatmaps():
+  """bam~final normalized heatmap png per contrast, as {cond1: {cond2: path}}."""
+  plots = {}
+  for contrast in pep.config["qutrna2"]["contrasts"]:
+    cond1, cond2 = contrast["cond1"], contrast["cond2"]
+    plots.setdefault(cond1, {})[cond2] = \
+      f"results/plots/normalized/cond1~{cond1}/cond2~{cond2}/bam~final/normalized_heatmap.png"
+  return plots
 
 rule report_create_params:
   input: _report_create_params
@@ -78,6 +89,7 @@ rule report_create_params:
         versions["qutrna2"] += f" ({rev}{'+dirty' if _git('status', '--porcelain') else ''})"
     d["png"] = get_read_feature_plots("png")
     d["png"]["heatmap"] = get_heatmap_plots("png")
+    d["png"]["normalized"] = get_normalized_heatmaps()
 
     bam_types = ["final"]
     if config["call_filtered"]:
@@ -89,6 +101,9 @@ rule report_create_params:
       "bam": sorted(expand("results/bam/final/{sample}.sorted.bam", sample=SAMPLES)),
       "scores": sorted(
         f"results/jacusa2/cond1~{c['cond1']}/cond2~{c['cond2']}/bam~{b}/{SCORES}"
+        for c in pep.config["qutrna2"]["contrasts"] for b in bam_types),
+      "permutation": sorted(
+        f"results/jacusa2/cond1~{c['cond1']}/cond2~{c['cond2']}/bam~{b}/permutation.tsv"
         for c in pep.config["qutrna2"]["contrasts"] for b in bam_types),
       "plots": sorted(flatten_dict(d["png"])),
     }

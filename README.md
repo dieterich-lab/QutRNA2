@@ -272,8 +272,8 @@ When the analysis is finished, the `<ANALYSIS_OUTPUT>` directory will contain th
 
 - **Overview** - working directory, config files, filters applied, the sample table, and the versions of QutRNA2, JACUSA2, Infernal, gpu-tRNA-mapper and sprinx. QutRNA2 and sprinx also record the commit they were built from.
 - **Preprocessing** - read count and read length plots, showing what each filter removed.
-- **Results** - the heatmaps, one sub-tab per contrast.
-- **Files** - paths to the final BAMs, the score tables and every plot, including the ones that the report does not embed.
+- **Results** - the heatmaps, one sub-tab per contrast: the permutation-normalized heatmap first (see [Plots](#plots)), then each heatmap configured under `plots.heatmap`.
+- **Files** - paths to the final BAMs, the score and permutation tables and every plot, including the ones that the report does not embed.
 - **Configuration** - the analysis and data YAML that was used for the pipeline run.
 
 Images are embedded as data URIs. The HTML file therefore opens anywhere without its plot directory, and a run with many contrasts can produce a report as large as tens of MB.

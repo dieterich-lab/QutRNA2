@@ -182,7 +182,8 @@ def _plot_normalized_heatmap_input(wildcards):
 
 rule plot_normalized_heatmap:
   input: unpack(_plot_normalized_heatmap_input)
-  output: "results/plots/normalized/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}/normalized_heatmap.pdf"
+  output: pdf="results/plots/normalized/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}/normalized_heatmap.pdf",
+          png="results/plots/normalized/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}/normalized_heatmap.png"
   conda: "qutrna2"
   log: "logs/plot/normalized_heatmap/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.log"
   params: sprinzl=lambda wildcards, input: f"--sprinzl {input.sprinzl}" if "sprinzl" in input.keys() else "",
@@ -191,7 +192,7 @@ rule plot_normalized_heatmap:
     python {workflow.basedir:q}/scripts/plot_norm_heatmap.py \
         --conditions '{wildcards.COND1},{wildcards.COND2}' \
         --fdr {params.fdr} \
-        --out {output:q} \
+        --out {output.pdf:q} \
         {params.sprinzl} \
         {input.perm:q} > {log:q} 2>&1
   """

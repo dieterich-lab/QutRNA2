@@ -113,8 +113,10 @@
 
 <section id="results" role="tabpanel" hidden>
   {% set contrasts = namespace(pairs=[]) %}
-  {% for cond1, by_cond2 in (png.get("heatmap") or {}).items() %}
-  {% for cond2, by_plot in by_cond2.items() %}
+  {# every contrast has a normalized heatmap; configured heatmaps are optional #}
+  {% for cond1, by_cond2 in png.normalized.items() %}
+  {% for cond2 in by_cond2 %}
+  {% set by_plot = ((png.get("heatmap") or {}).get(cond1) or {}).get(cond2) or {} %}
   {% set contrasts.pairs = contrasts.pairs + [(cond1, cond2, by_plot)] %}
   {% endfor %}
   {% endfor %}
@@ -129,6 +131,17 @@
   {# bam~final only, and the coverage variant; the rest are listed under Files #}
   {% for cond1, cond2, by_plot in contrasts.pairs %}
   <div id="contrast-{{ loop.index }}" role="tabpanel" {{ "" if loop.first else "hidden" }}>
+    {% set normalized = png.normalized[cond1][cond2] %}
+    <details class="plot" open>
+      <summary>normalized</summary>
+      <figure>
+        <figcaption>
+          Normalized score of mismatches and indels, permutation test :
+          <span class="pdf">{{ normalized | pdf }}</span>
+        </figcaption>
+        {{ normalized | embed }}
+      </figure>
+    </details>
     {% for plot_id, by_bam in by_plot.items() %}
     {% set covs = namespace(items=[]) %}
     {% for stem, path in (by_bam.get("final") or {}).items() if stem.endswith("_cov") %}
