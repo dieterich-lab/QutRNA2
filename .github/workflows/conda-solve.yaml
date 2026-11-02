@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # the runner has no conda; this sets $CONDA
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniconda-version: latest
       - run: $CONDA/bin/conda env create -f conda.yaml -n solve-check --dry-run
 
       # the lockfile is the file installed by the container. pip entries
