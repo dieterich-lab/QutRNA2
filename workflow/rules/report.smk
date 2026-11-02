@@ -3,6 +3,7 @@ import importlib.metadata
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 
@@ -90,6 +91,17 @@ rule report_create_params:
     d["png"] = get_read_feature_plots("png")
     d["png"]["heatmap"] = get_heatmap_plots("png")
     d["png"]["normalized"] = get_normalized_heatmaps()
+
+    # the plot id is the user's own name; the heading says what the plot shows
+    d["heatmap_labels"] = {}
+    for plot in config["plots"].get("heatmap", []):
+      score = plot.get("score", DEFAULT_SCORE).split("::")[0].replace("_", " ")
+      args = shlex.split(plot.get("opts") or "")
+      trnas = next((arg.split("=", 1)[1] if "=" in arg else args[i + 1]
+                    for i, arg in enumerate(args)
+                    if arg.split("=")[0] == "--trnas"), None)
+      d["heatmap_labels"][plot["id"]] = \
+        f"{score}, tRNAs matching {trnas}" if trnas else f"{score}, all tRNAs"
 
     bam_types = ["final"]
     if config["call_filtered"]:

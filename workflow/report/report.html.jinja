@@ -133,7 +133,7 @@
   <div id="contrast-{{ loop.index }}" role="tabpanel" {{ "" if loop.first else "hidden" }}>
     {% set normalized = png.normalized[cond1][cond2] %}
     <details class="plot" open>
-      <summary>normalized</summary>
+      <summary>Normalized score of mismatches and indels, all tRNAs</summary>
       <figure>
         <figcaption>
           Normalized score of mismatches and indels, permutation test :
@@ -149,7 +149,7 @@
     {% endfor %}
     {% if covs.items %}
     <details class="plot">
-      <summary>{{ plot_id }}{% if covs.items | length > 1 %} ({{ covs.items | length }}){% endif %}</summary>
+      <summary>{{ plot_id }}: {{ heatmap_labels.get(plot_id, "") }}{% if covs.items | length > 1 %} ({{ covs.items | length }}){% endif %}</summary>
       {% for stem, path in covs.items %}
       <figure>
         <figcaption>
