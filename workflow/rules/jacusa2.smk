@@ -92,7 +92,8 @@ rule jacusa2_permutation:
   conda: "qutrna2"
   log: "logs/jacusa2/permutation/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.log"
   benchmark: repeat("benchmarks/jacusa2/permutation/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.txt", config.get("_benchmark_repeats", 1))
-  threads: workflow.cores
+  # a callable: read per job, so --unlock needs no --cores
+  threads: lambda wildcards: workflow.cores
   params: permutation=config["jacusa2"]["permutation"]
   shell: """
     python {workflow.basedir:q}/scripts/add_permutation_scores.py \
