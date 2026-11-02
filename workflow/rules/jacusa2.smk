@@ -22,7 +22,8 @@ def _jacusa2_input(cond_i, suffix=""):
     tbl = pep.sample_table.set_index("condition")
     samples = tbl.loc[condition, "sample_name"]
     if not isinstance(samples, str):
-      samples = samples.to_list()
+      # fixed order: replicate order moves the score and permutation draws
+      samples = sorted(set(samples))
     else:
       samples = [samples, ]
 
