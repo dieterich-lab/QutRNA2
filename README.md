@@ -185,7 +185,8 @@ Second, define your `<DATA_YAML>`. This file describes what reference and Sprinz
 
 - `mito` accounts for tRNAs that may have lost an arm (common in some mitochondrial genomes): it tries several CMs and diagnoses arm loss rather than assuming a cloverleaf structure. `euk`/`arch`/`bact` assume no arm loss and select from a combined CM database instead.
 - sprinx ships with default CMs for each scheme; override them with `qutrna2.sprinzl.mito.canonical_cm` (a list) and `qutrna2.sprinzl.mito.armless_cm_dir` for `scheme: mito`, or `qutrna2.sprinzl.cyto.cyto_cm_db` for `scheme: euk`/`arch`/`bact`.
-- your reference FASTA headers need to carry each tRNA's anticodon and amino acid somewhere sprinx can find it: as `id|aa|anticodon|taxon`, an `anticodon=XXX` tag, or a GtRNAdb-style name like `tRNA-Ala-TGC`. The pipeline checks every header against this before doing any work, and reports exactly which records don't match.
+- each tRNA ID (the header up to the first space) needs its amino acid and anticodon, as `id|aa|anticodon|taxon` or a GtRNAdb-style name like `tRNA-Ala-TGC`. Descriptions are dropped. The pipeline checks every ID before it starts.
+- rename mitochondrial gene symbols (`MT-TA`, `mt-Ta`) accordingly, e.g. `mt-tRNA-Ala-TGC`.
 - which Sprinzl labels get plotted, and in what order, is derived from the labels sprinx assigns. Set `qutrna2.sprinzl.labels` to override this list yourself, e.g. to drop a position from the heatmap by setting it to `-`.
 
 **Manual / precomputed:** In the QutRNA2 publication, for eukaryotic nuclear tRNAs, we used the covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and corresponding labels in `data/nuclear-euk-masked.txt`. To use this approach yourself, set `qutrna2.sprinzl.cm` together with `qutrna2.sprinzl.labels` (or `qutrna2.sprinzl.label`) to supply your own CM and a Sprinzl labels file. 
