@@ -66,28 +66,15 @@ plots:
     # Use "--show_percent" to add additional info to the plots
     - id: show_percent
       opts: --show_percent
-  heatmap: # here heatmap plots are defined.
-    # Each heatmap plot consists of an "id", the name of the plot, and additional options
-    - id: all_trnas_M-subsampled
-      # add a customizable title to the heatmap. Use the wildcards {} in the following:
-      title: '{condition1}, {condition2}, {score}, {bam_type}, {position_column}, {anti_codon}, {amino_acid}'
-      # add additional options to plot_heatmap.R script.
-      # Check plot_heatmap.R for all options!
-      # For example: The sort order of the tRNAs in the heatmap can be defined by "--sort_by trna|coverage"
-      opts: "--sort_by trna --hide_varm"
-      # Define here <name-of-score>::<score-columns>
-      # score_columns:
-      # * norm_mismatch_score_subsampled corresponds to subsampled mismatch score,
-      # * norm_insertion_score_subsampled corresponds to subsampled inseriton score, and
-      # * norm_deletion_score_subsampled corresponds to subsampled deletion score
-      # use '+' for linear combination of scores:
-      # "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
-      # In the following, only the subsampled mismatch score is used.
-      score: "M_subsampled::norm_mismatch_score_subsampled"
-    - id: trnas_bys_aa_M-subsampled
-      # group heatmap plots by amino_acid.
+  heatmap: # each entry is drawn with the normalized score, one heatmap per contrast
+    - id: Q34_substrates
+      # tRNAs selected by regex, and positions boxed. Both are adapted to the reference
+      opts: "--trnas='Asp-GTC|Asn-GTT|His-GTG|Tyr-GTA' --mark_positions=':34$' --min_reads=30"
+      # columns of permutation.tsv that are summed. By default, all three are summed
+      norm_score: perm_mismatch_score_minus_max_null+perm_deletion_score_minus_max_null+perm_insertion_score_minus_max_null
+      # one block per amino acid, or coverage_split: true for blocks by median coverage
       group: amino_acid
-      opts: "--sort_by trna --hide_varm"
-      score: "M_subsampled::norm_mismatch_score_subsampled"
-      # use NONE, MAX_SCORE or a numeric value to enforce equal color scaling of the score in all heatmaps
+      # top of the colour scale: NONE, a number, CONTRASTS (one scale over this entry's contrasts) or OVERALL
       harmonize_scaling: CONTRASTS
+      # the subsampling normalized score is also drawn, and listed under Files in the report
+      subsampled: true

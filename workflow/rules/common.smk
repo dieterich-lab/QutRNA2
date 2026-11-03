@@ -1,5 +1,6 @@
 from snakemake import shell
 import itertools
+import shlex
 import pandas as pd
 
 
@@ -15,7 +16,9 @@ wildcard_constraints:
 
 
 # Default JACUSA2 score to use: label::score1+score2+... see add_scores.R
-DEFAULT_SCORE = "M_subsampled::norm_mismatch_score_subsampled"
+DEFAULT_SCORE = "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
+# columns of permutation.tsv summed in a normalized heatmap, see plot_norm_heatmap.py
+DEFAULT_NORM_SCORE = "perm_mismatch_score_minus_max_null+perm_deletion_score_minus_max_null+perm_insertion_score_minus_max_null"
 
 # seq is pep.yaml's declared default. pepschema does not apply it
 COORDS = pep.config["qutrna2"].get("coords", "seq")
@@ -24,6 +27,8 @@ COORDS = pep.config["qutrna2"].get("coords", "seq")
 ########################################################################################################################
 
 def flatten_dict(d):
+  if not d:
+    return []
   return list(pd.json_normalize(d, sep="_").to_dict(orient="records")[0].values())
 
 ########################################################################################################################
@@ -45,6 +50,18 @@ def heatmap_plots(cond1, cond2):
     plots.append(plot)
 
   return plots
+
+
+def subsampled_plots(cond1, cond2):
+  """Heatmap configs for which the subsampling normalized score is also drawn."""
+  return [plot for plot in heatmap_plots(cond1, cond2) if plot.get("subsampled")]
+
+
+def heatmap_opt(plot, flag):
+  """Value of flag in a heatmap entry's opts, as --flag=value or --flag value, or None."""
+  args = shlex.split(plot.get("opts") or "") + [""]
+  return next((arg.split("=", 1)[1] if "=" in arg else args[i + 1]
+               for i, arg in enumerate(args) if arg.split("=")[0] == flag), None) or None
 
 ########################################################################################################################
 

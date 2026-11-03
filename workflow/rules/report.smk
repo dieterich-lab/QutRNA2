@@ -3,7 +3,6 @@ import importlib.metadata
 import json
 import os
 import re
-import shlex
 import shutil
 import subprocess
 
@@ -46,9 +45,10 @@ def _report_create_params(wildcards):
     cond1, cond2 = contrast["cond1"], contrast["cond2"]
     targets.extend(expand("results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv",
       cond1=cond1, cond2=cond2,
-      plot_id=[plot["id"] for plot in heatmap_plots(cond1, cond2)],
+      plot_id=[plot["id"] for plot in subsampled_plots(cond1, cond2)],
       bam_type=bam_types))
   targets.extend(flatten_dict(get_normalized_heatmaps()))
+  targets.extend(flatten_dict(get_normalized_set_heatmaps()))
 
   return targets
 
@@ -60,6 +60,17 @@ def get_normalized_heatmaps():
     cond1, cond2 = contrast["cond1"], contrast["cond2"]
     plots.setdefault(cond1, {})[cond2] = \
       f"results/plots/normalized/cond1~{cond1}/cond2~{cond2}/bam~final/normalized_heatmap.png"
+  return plots
+
+
+def get_normalized_set_heatmaps():
+  """bam~final normalized heatmap png per contrast and plots.heatmap entry."""
+  plots = {}
+  for contrast in pep.config["qutrna2"]["contrasts"]:
+    cond1, cond2 = contrast["cond1"], contrast["cond2"]
+    for plot in heatmap_plots(cond1, cond2):
+      plots.setdefault(cond1, {}).setdefault(cond2, {})[plot["id"]] = \
+        f"results/plots/normalized/cond1~{cond1}/cond2~{cond2}/{plot['id']}/bam~final/normalized_heatmap.png"
   return plots
 
 rule report_create_params:
@@ -91,17 +102,14 @@ rule report_create_params:
     d["png"] = get_read_feature_plots("png")
     d["png"]["heatmap"] = get_heatmap_plots("png")
     d["png"]["normalized"] = get_normalized_heatmaps()
+    d["png"]["normalized_sets"] = get_normalized_set_heatmaps()
 
-    # the plot id is the user's own name; the heading says what the plot shows
+    # the plot id is the user's own name. Score and tRNAs are given in the heading
     d["heatmap_labels"] = {}
     for plot in config["plots"].get("heatmap", []):
-      score = plot.get("score", DEFAULT_SCORE).split("::")[0].replace("_", " ")
-      args = shlex.split(plot.get("opts") or "")
-      trnas = next((arg.split("=", 1)[1] if "=" in arg else args[i + 1]
-                    for i, arg in enumerate(args)
-                    if arg.split("=")[0] == "--trnas"), None)
-      d["heatmap_labels"][plot["id"]] = \
-        f"{score}, tRNAs matching {trnas}" if trnas else f"{score}, all tRNAs"
+      trnas = heatmap_opt(plot, "--trnas")
+      d["heatmap_labels"][plot["id"]] = f"Normalized score, {norm_score_label(plot)}, " + \
+        (f"tRNAs matching {trnas}" if trnas else "all tRNAs")
 
     bam_types = ["final"]
     if config["call_filtered"]:

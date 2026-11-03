@@ -70,7 +70,10 @@ rule jacusa2_run:
 ################################################################################
 def _jacusa_add_scores():
   plots = sorted(config["plots"].get("heatmap", []), key = lambda item: item["id"])
-  scores = sorted({plot.get("score", DEFAULT_SCORE) for plot in plots})
+  # subsampled columns are computed only for subsampled heatmaps. The table is
+  # required for the Sprinzl labels of the normalized heatmaps
+  scores = sorted({plot.get("score", DEFAULT_SCORE) for plot in plots if plot.get("subsampled")}) \
+    or ["MDI::mismatch_score+deletion_score+insertion_score"]
 
   return "-s " + ",".join(scores)
 
@@ -92,7 +95,7 @@ rule jacusa2_permutation:
   conda: "qutrna2"
   log: "logs/jacusa2/permutation/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.log"
   benchmark: repeat("benchmarks/jacusa2/permutation/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.txt", config.get("_benchmark_repeats", 1))
-  # a callable: read per job, so --unlock needs no --cores
+  # a callable, evaluated per job. --unlock is then accepted without --cores
   threads: lambda wildcards: workflow.cores
   params: permutation=config["jacusa2"]["permutation"]
   shell: """
@@ -144,7 +147,8 @@ def _input_jacusa2_max_scores(_):
 
 
 def _params_config_scores():
-  scores = [plot.get("score", DEFAULT_SCORE) for plot in config["plots"].get("heatmap", [])]
+  scores = [plot.get("score", DEFAULT_SCORE) for plot in config["plots"].get("heatmap", [])
+            if plot.get("subsampled")]
 
   return sorted(list(set([score.split("::")[0] for score in scores])))
 

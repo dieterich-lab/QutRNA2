@@ -1,4 +1,5 @@
 import os
+import shlex
 
 import pandas as pd
 from snakemake.io import directory, unpack
@@ -59,7 +60,7 @@ def get_heatmap_plots(ftype):
   for contrast in contrasts:
     cond1 = contrast["cond1"]
     cond2 = contrast["cond2"]
-    for plot in heatmap_plots(cond1, cond2):
+    for plot in subsampled_plots(cond1, cond2):
       plot_id = plot["id"]
       for bam_type in bam_types:
         fname = f"results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/files.tsv"
@@ -192,6 +193,73 @@ rule plot_normalized_heatmap:
     python {workflow.basedir:q}/scripts/plot_norm_heatmap.py \
         --conditions '{wildcards.COND1},{wildcards.COND2}' \
         --fdr {params.fdr} \
+        --out {output.pdf:q} \
+        {params.sprinzl} \
+        {input.perm:q} > {log:q} 2>&1
+  """
+
+
+def _normalized_set_opts(wildcards):
+  plot = get_plot("heatmap", wildcards.plot_id)
+  # the entry's plot_heatmap.R flags, under plot_norm_heatmap.py's names
+  flags = {"--trnas": "--trnas", "--mark_positions": "--mark",
+           "--min_reads": "--min_reads", "--remove_prefix": "--remove_prefix"}
+  opts = [f"{new}={shlex.quote(value)}" for old, new in flags.items()
+          if (value := heatmap_opt(plot, old))]
+  if plot.get("coverage_split"):
+    opts.append("--coverage_split")
+  elif plot.get("group"):
+    opts.append(f"--group={plot['group']} --trna_annotation={TRNA_ANNOTATION}")
+  scaling = str(plot.get("harmonize_scaling", "NONE"))
+  if scaling.replace(".", "", 1).isdigit():
+    opts.append(f"--max_score={scaling}")
+  if (tables := _scale_tables(wildcards)):
+    opts.append(" ".join(["--scale_with", *tables]))
+  return " ".join([f"--score_column={plot.get('norm_score', DEFAULT_NORM_SCORE)}", *opts])
+
+
+def _scale_tables(wildcards):
+  """Permutation tables over which the colour scale is shared: the entry's
+  contrasts for harmonize_scaling CONTRASTS, every contrast for OVERALL."""
+  plot = get_plot("heatmap", wildcards.plot_id)
+  scaling = plot.get("harmonize_scaling", "NONE")
+  if scaling not in ("CONTRASTS", "OVERALL"):
+    return []
+  return [f"results/jacusa2/cond1~{c['cond1']}/cond2~{c['cond2']}/bam~{wildcards.bam_type}/permutation.tsv"
+          for c in pep.config["qutrna2"]["contrasts"]
+          if scaling == "OVERALL" or plot in heatmap_plots(c["cond1"], c["cond2"])]
+
+
+def _normalized_set_input(wildcards):
+  return {**_plot_normalized_heatmap_input(wildcards), "trna_annotation": TRNA_ANNOTATION,
+          "scale_with": _scale_tables(wildcards)}
+
+
+def norm_score_label(plot):
+  """The error types summed in an entry's normalized heatmap, e.g. mismatch + deletion."""
+  columns = plot.get("norm_score", DEFAULT_NORM_SCORE).split("+")
+  return " + ".join(c.removeprefix("perm_").removesuffix("_score_minus_max_null") for c in columns)
+
+
+# each plots.heatmap entry again, with the normalized score of the permutation test
+rule plot_normalized_heatmap_set:
+  input: unpack(_normalized_set_input)
+  output: pdf="results/plots/normalized/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}/normalized_heatmap.pdf",
+          png="results/plots/normalized/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}/normalized_heatmap.png"
+  wildcard_constraints: plot_id="[^/~]+"
+  conda: "qutrna2"
+  log: "logs/plot/normalized_heatmap/cond1~{COND1}/cond2~{COND2}/{plot_id}/bam~{bam_type}.log"
+  params: sprinzl=lambda wildcards, input: f"--sprinzl {input.sprinzl}" if "sprinzl" in input.keys() else "",
+          fdr=config["jacusa2"]["fdr"],
+          opts=_normalized_set_opts,
+          title=lambda wildcards: f"{wildcards.COND1}, {wildcards.COND2}, normalized score, "
+                                  f"{norm_score_label(get_plot('heatmap', wildcards.plot_id))}"
+  shell: """
+    python {workflow.basedir:q}/scripts/plot_norm_heatmap.py \
+        --conditions '{wildcards.COND1},{wildcards.COND2}' \
+        --fdr {params.fdr} \
+        --title {params.title:q} \
+        {params.opts} \
         --out {output.pdf:q} \
         {params.sprinzl} \
         {input.perm:q} > {log:q} 2>&1

@@ -67,7 +67,7 @@ def target_trna_plots():
     cond2 = contrast["cond2"]
 
     dname =  "results/plots/scores/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}"
-    for plot in heatmap_plots(cond1, cond2):
+    for plot in subsampled_plots(cond1, cond2):
       targets.extend(
         expand(dname,
           cond1=cond1, cond2=cond2,
@@ -75,6 +75,10 @@ def target_trna_plots():
     targets.extend(
       expand("results/plots/normalized/cond1~{cond1}/cond2~{cond2}/bam~{bam_type}/normalized_heatmap.pdf",
         cond1=cond1, cond2=cond2, bam_type=bam_types))
+    targets.extend(
+      expand("results/plots/normalized/cond1~{cond1}/cond2~{cond2}/{plot_id}/bam~{bam_type}/normalized_heatmap.pdf",
+        cond1=cond1, cond2=cond2, bam_type=bam_types,
+        plot_id=[plot["id"] for plot in heatmap_plots(cond1, cond2)]))
 
   return targets
 

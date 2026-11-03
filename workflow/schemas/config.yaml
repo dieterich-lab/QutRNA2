@@ -275,8 +275,21 @@ properties:
               type: string
             group:
               type: string
-              enum: ["amino_acid", "anti_codon", "amnio_acid,anti_codon"]
+              enum: ["amino_acid", "anti_codon", "amino_acid,anti_codon"]
+            norm_score:
+              description: perm_<type>_score_minus_max_null columns of permutation.tsv, joined by +
+              type: string
+              default: "perm_mismatch_score_minus_max_null+perm_deletion_score_minus_max_null+perm_insertion_score_minus_max_null"
+            coverage_split:
+              description: blocks of tRNAs by median coverage, as in the target sheets. group is ignored when set
+              type: boolean
+              default: false
+            subsampled:
+              description: the subsampling normalized score is also drawn, by plot_heatmap.R, and listed under Files in the report
+              type: boolean
+              default: false
             score:
+              description: the subsampling normalized score, used with subsampled
               type: string
               default: "MDI_subsampled::norm_mismatch_score_subsampled+norm_deletion_score_subsampled+norm_insertion_score_subsampled"
             harmonize_scaling:
