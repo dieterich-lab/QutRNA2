@@ -15,6 +15,8 @@ import pytest
 from add_permutation_scores import (
     MIN_HIGHER_SCORING,
     REDRAW,
+    InputError,
+    check_method,
     counts_for,
     enumerate_splits,
     enumerate_tables,
@@ -128,3 +130,20 @@ def test_each_replicate_is_one_row(error_type):
     else:
         found = 1 if error_type == "deletion" else 2
         assert first[0, 1].tolist() == [found, 3 + 1 - found]
+
+
+@pytest.mark.parametrize("command", [
+    "JACUSA2 Version: 2.1.17 (main) call-2 -R ref.fasta -Q 20 -p 1",
+    "JACUSA2 Version: 2.1.17 (main) call-2 -R ref.fasta -u DirMult:subsampleRuns=1000",
+])
+def test_call2_with_the_dirmult_score_passes(command):
+    check_method(command)
+
+
+@pytest.mark.parametrize("command", [
+    "JACUSA2 Version: 2.1.17 (main) call-1 -R ref.fasta",    # should fail because call-1
+    "JACUSA2 Version: 2.1.17 (main) call-2 -R ref.fasta -u Lrt", # should fail because -u Lrt instead of DirMult
+])
+def test_another_method_or_score_stops(command):
+    with pytest.raises(InputError):
+        check_method(command)

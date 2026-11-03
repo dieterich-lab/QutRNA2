@@ -351,8 +351,10 @@ if (opts$options$norm_score) {
 }
 
 df$exceed_max_score <- FALSE
-if (!is.null(opts$options$max_score)) {
-  i <- df$score > opts$options$max_score
+# with $, an unset max_score partial-matches the max_scores path
+max_score <- opts$options[["max_score"]]
+if (!is.null(max_score)) {
+  i <- df$score > max_score
   if (any(i, na.rm = TRUE)) {
     df$score[i] <- NA
     df$exceed_max_score[i] <- TRUE

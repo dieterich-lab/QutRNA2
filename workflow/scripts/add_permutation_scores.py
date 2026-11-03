@@ -570,6 +570,22 @@ def read_quality(command):
     return int(quality.group(1)) if quality else None
 
 
+def check_method(command):
+    """Raise InputError unless the command is call-2 with the DirMult score.
+
+    The permutation test is validated on that method alone. Without -u, the
+    DirMult score is used by JACUSA2.
+    """
+    if not re.search(r"\bcall-2\b", command):
+        raise InputError("expected a JACUSA2 call-2 run, the only method "
+                         "the permutation test is validated on.")
+    score = re.search(r"-u\s+(\S+)", command)
+    if score and not score.group(1).startswith("DirMult"):
+        raise InputError(f"expected the DirMult score, found -u "
+                         f"{score.group(1)}. The permutation test is "
+                         "validated on DirMult alone.")
+
+
 def check_columns(columns):
     """Raise InputError unless there are two conditions and every count column.
 
@@ -711,6 +727,7 @@ def main():
 
     try:
         command, columns = read_header(args.jacusa2_out)
+        check_method(command)
         check_columns(columns)
     except InputError as problem:
         sys.exit(f"{parser.prog}: {problem}")

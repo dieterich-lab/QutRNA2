@@ -146,6 +146,34 @@ def blocks(table, trnas, args):
     return [(None, trnas)]
 
 
+def layout(groups):
+    """Return the rows of the figure, and the block labels.
+
+    groups is a list of (label, tRNAs). rows lists the tRNAs in drawing order,
+    with None for the row of each label. labels lists (row index, label).
+    """
+    rows, labels = [], []
+    for label, members in groups:
+        if label is not None:
+            labels.append((len(rows), label))
+            rows.append(None)
+        rows += members
+    return rows, labels
+
+
+def colour_top(table, columns, args):
+    """Return the top of the colour scale.
+
+    This is --max_score when given. Otherwise it is the largest score in table
+    and in the --scale_with tables, which are filtered just like the table was.
+    """
+    if args.max_score:
+        return args.max_score
+    return max([table.norm_score.max()]
+               + [keep(scored(pd.read_csv(path, sep="\t"), args.fdr, columns),
+                       args)[0].norm_score.max() for path in args.scale_with])
+
+
 def grid(table, rows, positions):
     """One row per cell, with its place on the axes. A missing cell is NaN.
 
@@ -327,22 +355,9 @@ def main():
 
     trnas = sorted(table.contig.unique())
     positions = ordered(table)
-    # a labelled block is given one row for its label, then one per tRNA
-    rows, labels = [], []
-    for label, members in blocks(table, trnas, args):
-        if label is not None:
-            labels.append((len(rows), label))
-            rows.append(None)
-        rows += members
+    rows, labels = layout(blocks(table, trnas, args))
     cells = grid(table, rows, positions)
-
-    # the same filters are applied to the other tables. The scale is then set
-    # by the drawn tRNAs alone
-    top = args.max_score or max(
-        [table.norm_score.max()]
-        + [keep(scored(pd.read_csv(path, sep="\t"), args.fdr, columns),
-                args)[0].norm_score.max() for path in args.scale_with])
-    scale = Normalize(0, top or 1)
+    scale = Normalize(0, colour_top(table, columns, args) or 1)
     fig, ax, bars = panel(len(positions), len(rows), trnas, positions,
                           coverage=bool(args.conditions))
     called = cells.called.fillna(value=False)
@@ -378,8 +393,8 @@ def main():
     if bars is not None:
         coverage_bars(fig, bars, table, rows, args.conditions)
     key_band(fig, ax, scale, args.fdr)
-    # the page size is set by the margins, and would be changed by
-    # bbox_inches="tight"
+    # the page size is set by the margins, and a tight bounding box would
+    # change it
     fig.savefig(args.out)
     fig.savefig(os.path.splitext(args.out)[0] + ".png", dpi=150)
     called = int(table.called.sum())
