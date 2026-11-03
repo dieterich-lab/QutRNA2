@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # the runner has no conda; this sets $CONDA
+      # conda is installed on the runner, and $CONDA is set here
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniconda-version: latest

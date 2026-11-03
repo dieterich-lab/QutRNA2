@@ -187,9 +187,9 @@ def fit(data, *, fallback=False):
 def single_replicate_loglik(data):
     """The fit of a single replicate, (N, 1, K), in closed form.
 
-    One count vector shows no overdispersion: the likelihood rises without
-    bound in the precision, towards sum of x log(x / N). Returns that limit
-    and an all-true convergence mask.
+    With one count vector, the likelihood rises without bound in the
+    precision, towards sum of x log(x / N). Return that limit and an
+    all-true convergence mask.
     """
     counts = data[:, 0]
     loglik = (counts * np.log(counts / counts.sum(-1, keepdims=True))).sum(-1)
@@ -293,8 +293,8 @@ def enumerate_splits(pooled, size, limit):
 def enumerate_tables(pooled, depths, limit):
     """Every table of the pooled counts with the given group depths fixed.
 
-    Returns (S, R, K), or None past limit tables. The last group takes what
-    the others leave.
+    Returns (S, R, K), or None past limit tables. The reads left over are
+    assigned to the last group.
     """
     pooled = np.asarray(pooled, dtype=np.int64)
     tables = np.zeros((1, 0, len(pooled)), dtype=np.int64)
@@ -378,7 +378,8 @@ def permute_reads(counts, rng, draws):
     """Random permutations of (N, R, K) counts, as (N, draws, R, K) tables.
 
     The reads of all groups are pooled and reassigned, each group keeping its
-    own depth, drawn from what the earlier groups left, one category at a time.
+    own depth, drawn from the reads not assigned to earlier groups, one
+    category at a time.
     """
     positions, groups, categories = counts.shape
     counts = counts.astype(np.int64)
@@ -435,7 +436,7 @@ def permutation_test(conditions, scorer, seed, draws=MIN_PERMUTATIONS):
     pvalue, n_splits = exact_tail(counts, first, observed, scorer, draws)
 
     null = score_tables(permute_reads(counts, rng, draws), first, scorer)
-    n_higher = (null >= observed[:, None]).sum(-1)
+    n_higher = (null >= observed[:, None] - TIE_TOLERANCE).sum(-1)
     drawn = n_splits == 0
     pvalue[drawn] = (1 + n_higher[drawn]) / (draws + 1)
 
@@ -457,7 +458,7 @@ def count_higher(task):
      min_higher) = task
     null = score_tables(permute_reads(counts, np.random.default_rng(seed),
                                       draws), first, scorer_for(error_type, qual))
-    hits = (null >= observed[:, None]).cumsum(-1)
+    hits = (null >= observed[:, None] - TIE_TOLERANCE).cumsum(-1)
     order = np.arange(1, min_higher + 1)
     index = (hits[:, :, None] >= order).argmax(1)
 
