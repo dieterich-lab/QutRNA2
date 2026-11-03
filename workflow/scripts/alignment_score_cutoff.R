@@ -90,17 +90,17 @@ annotation <- data.frame(
 p_score <- scores |>
   mutate(category = case_match(
     category,
-    "POS" ~ "Real",
-    "NEG" ~ "Random")) |>
+    "POS" ~ "Forward",
+    "NEG" ~ "Reverse")) |>
   ggplot(aes(x = alignment_score, fill = category)) +
   ylab("Frequency") + 
   scale_fill_manual(
-    name = "Alignment",
-    values = c("Real" = "orange", "Random" = "blue"),
-    breaks = c("Real", "Random")) +
+    name = "Reference",
+    values = c("Forward" = "#004488", "Reverse" = "#DDAA33"),
+    breaks = c("Forward", "Reverse")) +
   xlab("Alignment score") +
   geom_histogram(binwidth = 1, alpha = 0.6, position = "identity") +
-  geom_vline(xintercept = cutoff, colour = "red") +
-  geom_text(data = annotation, aes(x = x, y = y, label = label), colour = "red", hjust = -.1) +
+  geom_vline(xintercept = cutoff, colour = "#BB5566") +
+  geom_text(data = annotation, aes(x = x, y = y, label = label), colour = "#BB5566", hjust = -.1) +
   theme_bw()
 ggsave(opts$options$score_plot, p_score)

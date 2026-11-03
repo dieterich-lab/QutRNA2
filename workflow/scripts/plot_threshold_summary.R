@@ -64,8 +64,8 @@ cutoffs <- read.table(opts$options$cutoff, header = TRUE, sep = "\t") |>
   mutate(label = paste0("Threshold: ", cutoff),
          category = case_match(
            read_type,
-           "mapped" ~ "Real",
-           "mapped-random" ~ "Random"),
+           "mapped" ~ "Forward",
+           "mapped-random" ~ "Reverse"),
          category = as.factor(category))
 cutoffs$sample_desc <- format_sample_desc(cutoffs)
 scores <- read.table(opts$args,
@@ -75,8 +75,8 @@ scores <- read.table(opts$args,
   mutate(base_calling = factor(base_calling, levels = c("pass", "fail", "merged", "unknown"), ordered = TRUE),
          category = case_match(
            read_type,
-           "mapped" ~ "Real",
-           "mapped-random" ~ "Random"),
+           "mapped" ~ "Forward",
+           "mapped-random" ~ "Reverse"),
          category = as.factor(category))
 scores$sample_desc <- format_sample_desc(scores)
 
@@ -91,15 +91,15 @@ for (cond in unique(scores$condition)) {
     ggplot(aes(x = alignment_score, y = count, fill = category)) +
     ylab("Reads") +
     scale_fill_manual(
-      name = "Alignment",
-      values = c("Real" = "orange", "Random" = "blue"),
-      breaks = c("Real", "Random")) +
+      name = "Reference",
+      values = c("Forward" = "#004488", "Reverse" = "#DDAA33"),
+      breaks = c("Forward", "Reverse")) +
     xlab("Alignment score") +
     xlim(0, aln_score_lim[2] + 1) +
     ylim(0, count_lim[2] + 1) +
     geom_col(alpha = .6, position = "identity") +
-    geom_vline(data = filtered_cutoffs, aes(xintercept = cutoff), colour = "red") +
-    geom_text(data = filtered_cutoffs, aes(x = cutoff, y = I(0.5), label = label), size.unit = "pt", colour = "red", hjust = -.1) +
+    geom_vline(data = filtered_cutoffs, aes(xintercept = cutoff), colour = "#BB5566") +
+    geom_text(data = filtered_cutoffs, aes(x = cutoff, y = I(0.5), label = label), size.unit = "pt", colour = "#BB5566", hjust = -.1) +
     theme_bw(base_size = 18) +
     facet_grid(sample_desc ~ condition)
   if (is.null(plots)) {

@@ -10,299 +10,180 @@ If you use QutRNA2, please cite: [https://doi.org/10.1093/nargab/lqag065](https:
 
 ![QutRNA2 aligns reads on a GPU, filters them, assigns Sprinzl coordinates from the reference, and scores every position with JACUSA2, whose statistical tests on basecalling error rates cover mismatches, deletions and insertions. The heatmap shows those scores for a contrast between two conditions, across tRNAs and Sprinzl coordinates.](doc/img/qutrna2_graphical_abstract.jpeg)
 
-## Table of Contents
+QutRNA2 compares two conditions, position by position:
 
-- [Quick Start](#quick-start)
-- [New Features](#new-features)
+1. Reads are mapped with [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper), up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail).
+2. Adapter-overlapping and multimapping alignments are removed, as are alignments that score no better than alignments to a reversed reference.
+3. Mismatches, deletions, and insertions are scored with [JACUSA2](https://github.com/dieterich-lab/JACUSA2).
+4. Each site's JACUSA2 score is corrected with a permutation test to report a normalized score, plus a Benjamini-Hochberg False Discovery Rate (FDR) from the p-value.
+
+## Contents
+
+- [Quick start](#quick-start)
 - [Requirements](#requirements)
-- [Installation](#installation)
-  - [Conda](#environment-setup-using-conda)
-  - [Singularity / Apptainer](#using-singularity-container)
-- [Setup QutRNA2 Analysis](#setup-qutrna2-analysis)
-- [Setup Data Configuration](#setup-data-configuration)
-  - [Sprinzl](#sprinzl)
-- [Setup Analysis Configuration](#setup-analysis-configuration)
-- [Examples](#examples)
-- [Execute Workflow](#execute-workflow)
-- [Results](#results)
-  - [Report](#report)
-  - [Alignments](#alignments)
-  - [cmalign](#cmalign)
-  - [JACUSA2](#jacusa2)
-  - [Plots](#plots)
-  - [Stats](#stats)
-  - [Secondary Structure](#secondary-structure-ss)
+- [Configuration](#configuration)
+- [Run QutRNA2](#run-qutrna2)
+- [Outputs](#outputs)
 
-## Quick Start
+## Quick start
 
-This quick start guide assumes you have [conda](https://docs.conda.io/en/latest/) installed and a CUDA-capable GPU available. See [Installation](#installation) for full details and a container solution using Singularity.
+The container image is the recommended way to run QutRNA2. Every tool and version is fixed in it.
 
-**1. Clone the repository:**
-```console
-git clone https://github.com/dieterich-lab/QutRNA2
-cd QutRNA2
-```
-
-**2. Install and activate the environment:**
-```console
-conda env create -f conda.yaml -n qutrna2
-conda activate qutrna2
-```
-
-**3. Copy and edit the example config files:**
-
-```console
-cp examples/analysis/map_with_gpu.yaml my_analysis.yaml
-cp examples/data/data_auto.yaml my_data.yaml
-```
-
-Edit `my_data.yaml` to point to your reference FASTA [examples](https://gtrnadb.ucsc.edu/genomes/eukaryota/Hsapi19/Hsapi19-seq.html), sample description TSV (labels and filepaths to basecalled samples) [example](https://github.com/dieterich-lab/QutRNA2/blob/main/examples/sample_table_fastq.tsv), and Sprinzl coordinate labels [example for eukaryotic cytosolic tRNA](https://github.com/dieterich-lab/QutRNA2/blob/main/data/nuclear-euk-masked.txt).
-Edit `my_analysis.yaml` to set paths for JACUSA2 and gpu-tRNA-mapper, and any GPU init commands.
-
-**4. Run a dry run to verify the workflow:**
-```console
-snakemake \
-    -c 1 \
-    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
-    --use-conda \
-    --configfiles my_analysis.yaml \
-    --config pepfile=my_data.yaml \
-    --directory <ANALYSIS_OUTPUT> \
-    -n
-```
-
-A list of jobs to be executed should appear. If it does without errors, remove `-n` and increase `-c` to the number of available cores to start the analysis.
-
-**5. Read the report:**
-
-A finished run writes `<ANALYSIS_OUTPUT>/results/report/report.html`. Open it in a browser for the final heatmaps, the preprocessing plots, configuration settings that were used, and the version of every tool that ran. It embeds its images, and contains file-paths to alignment BAM files and intermediate files for inspection.
-
-## New Features
-
-QutRNA2 features the novel GPU-assisted [gpu-tRNA-mapper](https://github.com/fkallen/gpu-tRNA-mapper) that performs up to 25x faster than the previously used mapper [parasail](https://github.com/jeffdaily/parasail) for the same task. Furthermore, a new, improved version of [JACUSA v2.1.17](https://github.com/dieterich-lab/JACUSA2/releases/download/v2.1.17/JACUSA_v2.1.17.jar) is included, featuring subsampled scores that improve the signal-to-noise ratio for identifying tRNA modifications.
-
-Finally, a filter framework has been added to the analysis workflow to remove spurious alignments by applying the following filters:
-
-* Filter Random alignments
-* Filter Adapter overlap (with 5' and 3' splint adapters)
-* Filter multimapping reads
-
-We added the following plots to assess the impact of filtering:
-
-* Alignment threshold summary plot
-* Impact of filters on read length
-* Impact of filters on the number of reads
-
-More customization options for heatmap plots:
-
-* Filter tRNAs by min. number of reads
-* Display or ignore specific tRNAs by regular expression
-* Mark positions of interest
-* Use patterns to customize the title of heatmap plots
+1. Get the code and build the image.
+   ```console
+   git clone https://github.com/dieterich-lab/QutRNA2
+   cd QutRNA2
+   singularity build --fakeroot qutrna2.sif singularity/qutrna2.def
+   ```
+   Building needs root or `--fakeroot`. Some HPC clusters do not allow `--fakeroot`; build on another machine and copy the image over.
+2. Copy the examples. Edit them as described under [Configuration](#configuration).
+   ```console
+   cp examples/analysis/map_with_gpu.yaml my_analysis.yaml
+   cp examples/data/data_auto.yaml my_data.yaml
+   cp examples/sample_table_fastq.tsv my_samples.tsv
+   ```
+3. Do a dry run. It checks the configs and lists the jobs. `--bind` must cover your data.
+   ```console
+   singularity run --nv --bind <DATA_DIR> qutrna2.sif snakemake -n -c 1 --snakefile workflow/Snakefile --configfiles my_analysis.yaml --config pepfile=my_data.yaml --directory my_run
+   ```
+4. Run it. Drop `-n`, and set `-c` to your number of cores.
+5. Open `my_run/results/report/report.html`.
 
 ## Requirements
-To use GPU-assisted mapping, you need a compatible NVIDIA GPU. For details, check [Hardware requirements](https://github.com/fkallen/gpu-tRNA-mapper?tab=readme-ov-file#hardware-requirements).
-In brief, a CUDA-capable GPU with Volta architecture or newer is recommended.
 
-If no compatible GPU is present, QutRNA2 can be used with [parasail](https://github.com/jeffdaily/parasail) but will run significantly slower. See [below](#setup-analysis-configuration).
+- Singularity or Apptainer, or conda (see [Run QutRNA2](#run-qutrna2)).
+- An NVIDIA GPU, Volta or newer. See the [hardware requirements](https://github.com/fkallen/gpu-tRNA-mapper?tab=readme-ov-file#hardware-requirements).
+- Without a GPU, use `examples/analysis/map_with_parasail.yaml`. Reads are then mapped on the CPU, much more slowly.
 
-## Installation
+## Configuration
 
-### Environment setup using Conda
+A run needs three files.
 
-We provide a conda file with all necessary packages. 
-Clone the repository and install the requirements with [conda](https://docs.conda.io/en/latest/).
+| file | content | template |
+|---|---|---|
+| sample table | one row per FASTQ or BAM file | `examples/sample_table_fastq.tsv` |
+| data YAML | reference, linkers, contrasts, Sprinzl setup | `examples/data/*.yaml` |
+| analysis YAML | mapper, filters, JACUSA2, extra heatmaps | `examples/analysis/*.yaml` |
 
-Go to your desired `<QUTRNA2-LOCAL-DIR>` and clone the repository:
+Sample table:
+
+- The columns are `condition`, `sample_name`, `subsample_name`, `base_calling` and `fastq` (or `bam`).
+- `fastq` is a gzipped FASTQ file.
+- Set `base_calling` to `pass`. It is a legacy column.
+- Rows with the same `sample_name` are pooled into one sample, e.g. FASTQ parts of one run.
+- Samples with the same `condition` are its replicates in JACUSA2 and the permutation test.
+- For mapped reads, use `bam` (template `examples/sample_table_bam.tsv`) with the analysis template `examples/analysis/existing_mapping.yaml`.
+
+Data YAML:
+
+- `ref_fasta.file` is the tRNA reference, linkers included. For example, from [GtRNAdb](https://gtrnadb.ucsc.edu/).
+- Set `linker5` and `linker3` to the adapter lengths in your reference.
+- Wrong linker lengths shift every coordinate.
+- `contrasts` lists the condition pairs to compare.
+
+Analysis YAML:
+
+- `alignment.method` is `gpu` or `parasail`.
+- Commands to run before mapping go in `gpu.pre`, e.g. loading a CUDA module.
+- `gpu.bin` and `jacusa2.jar` are the tool paths, if they are not on your PATH.
+- The filters are switched on under `filter`: random alignments, adapter overlap (5' and 3' linkers), multimappers.
+- Random alignments: reads are also aligned to a reversed reference. The cutoff is the lowest score at which at least `alignment.precision` (default 0.999) of the kept alignments are to the forward reference.
+
+<img src="doc/img/alignment_score_cutoff.png" width="500" alt="Illustration of alignment scores against the forward and the reversed reference. Alignments above the cutoff are kept.">
+
+- Read-count, read-length and heatmap plots are added under `plots`.
+
+Each `plots.heatmap` entry is one normalized heatmap per contrast. Its options are commented in `examples/analysis/map_with_gpu.yaml`.
+
+All options and their defaults are in `workflow/schemas/config.yaml` and `workflow/schemas/pep.yaml`.
+
+### Sprinzl coordinates
+
+| approach | data YAML key | template |
+|---|---|---|
+| automatic, with [sprinx](https://github.com/dieterich-lab/sprinx) (recommended) | `sprinzl.scheme` | `data_auto.yaml` |
+| your own covariance model | `sprinzl.cm`, `sprinzl.labels` | `data_cm.yaml` |
+| an aligned FASTA | `sprinzl.afasta` | `data_afasta.yaml` |
+| a sequence-to-Sprinzl table | `sprinzl.seq_to_sprinzl` | `data_seq_to_sprinzl.yaml` |
+
+- `scheme` is `euk`, `arch`, `bact` or `mito`. `mito` allows for tRNAs that lost an arm.
+- Default models come with sprinx. Override them with `sprinzl.mito.canonical_cm` and `sprinzl.mito.armless_cm_dir` (for `mito`), or `sprinzl.cyto.cyto_cm_db`.
+- The amino acid and anticodon are read by sprinx from each tRNA ID. The ID is the header up to the first space.
+- The ID must have the form `id|aa|anticodon|taxon`, or a GtRNAdb-style name like `tRNA-Ala-TGC`.
+- Rename mitochondrial gene symbols. For example, `mt-Ta` becomes `mt-tRNA-Ala-TGC`.
+- Every ID is checked before the run starts.
+- `ignore_trnas` is a regex of tRNAs to leave out of Sprinzl labelling. They then drop out of the plots. Use `^mt-` for a nuclear run.
+- The plotted labels and their order are set in `sprinzl.labels`. A `-` drops a position.
+
+Bundled files:
+
+- `data/TRNAinf-euk.cm` (from [tRAX](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm)) with `data/nuclear-euk-masked.txt`, for eukaryotic nuclear tRNAs, as in the paper.
+- `data/human_mt_seq_to_sprinzl.tsv`, for human mt-tRNAs ([Suzuki et al. 2020](https://www.nature.com/articles/s41467-020-18068-6)). Its plotted labels are in `data/human_mt_sprinzl_labels.txt`.
+- More covariance models are in [tRNAscan-SE](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
+
+## Run QutRNA2
+
+**Container (recommended).** Download the image from Zenodo (if using v2.0.0 as in our manuscript), or build it (later versions):
 ```console
-cd <QUTRNA2-LOCAL-DIR>
-git clone https://github.com/dieterich-lab/QutRNA2
+singularity build --fakeroot qutrna2.sif singularity/qutrna2.def
+singularity run --nv --bind <DATA_DIR> qutrna2.sif snakemake --cores <N> --snakefile workflow/Snakefile --configfiles my_analysis.yaml --config pepfile=my_data.yaml --directory my_run
 ```
+- `--nv` makes the GPU available in the container.
+- `--bind` must cover every path in your configs.
 
-Next, install all the requirements: 
+**Conda.** Create the environment, then run the same Snakemake command with `--use-conda`:
 ```console
-cd QutRNA2
 conda env create -f conda.yaml -n qutrna2
-```
-
-Finally, activate the environment:
-```console
 conda activate qutrna2
-```
-### Using Singularity container
-
-If Singularity/Apptainer is not already available on your system, see the [SingularityCE](https://docs.sylabs.io/guides/latest/admin-guide/installation.html) or [Apptainer](https://apptainer.org/docs/admin/latest/installation.html) installation guides.
-
-#### Use the pre-built container image
-
-The Zenodo link in our manuscript contains a pre-built container image. You can download it, [set up your config files](#setup-qutrna2-analysis), and run it as [instructed here](#run-using-the-container).
-
-#### Build your own container image
-
-A Singularity definition file is provided at [`singularity/qutrna2.def`](https://github.com/dieterich-lab/QutRNA2/blob/main/singularity/qutrna2.def) to build a portable container image as follows:
-
-```console
-singularity build qutrna2.sif singularity/qutrna2.def
+snakemake --cores <N> --use-conda --snakefile workflow/Snakefile --configfiles my_analysis.yaml --config pepfile=my_data.yaml --directory my_run
 ```
 
-> Note: building a Singularity image typically requires root or `--fakeroot` privileges (e.g. `singularity build --fakeroot qutrna2.sif singularity/qutrna2.def`)
-> If building on an HPC cluster, check whether `--fakeroot` is supported.
+**Cluster.** There are two options:
 
-## Setup QutRNA2 analysis
-QutRNA2 uses YAML files to define the data (data.yaml) and parametrize the analysis (analysis.yaml). Finally, a TSV file provides the sample description.
+- Submit the command above as one job. Add `--executor local`: the job already has its resources, and Snakemake runs the rules inside it. Set `--cores` to the job's CPUs (e.g. `$SLURM_CPUS_ON_NODE`).
+- Or let Snakemake submit each rule, with a profile. `workflow/profile/slurm-cluster/` is a SLURM example. Partitions, accounts and threads go in the profile.
 
-In summary, the sample description `<SAMPLE_DESC>` must be a TAB-separated file and contain the following columns:
+## Outputs
 
-| condition | sample_name | subsample_name | base_calling | fastq\|bam |
-| --------- | ----------- | -------------- | ------------ | ---------- |
-| ...       | ...         | ...            | ...          | ...        |
+All paths are inside the run directory (`--directory`). Each contrast gets its own folders. For example, for `wt` against `KO`:
 
-See the files in the `QutRNA2/examples` folder for documented YAML and toy examples for sample tables. Note that the column `base_calling` is a legacy field and should be set to `pass` for all rows.
-QutRNA2 distinguishes the configuration of the analysis and the data. The following analysis types are supported: 
-
-* **(recommended)** map reads with gpu-tRNA-mapper (see `QutRNA2/examples/analysis/map_with_gpu.yaml`),
-* map reads with parasail (see `QutRNA2/examples/analysis/map_with_parasail.yaml`), and
-* use exisiting mapping (see `QutRNA2/examples/analysis/existing_mapping.yaml`.
-
-QutRNA2 supports the following approaches to assign Sprinzl coordinates and the configuration of data input differs based on it:
-
-* **(recommended)** automatic labeling via [sprinx](https://github.com/dieterich-lab/sprinx) (see `QutRNA2/examples/data/data_auto.yaml`),
-* using your own covariance model and secondary structure alignment (see `QutRNA2/examples/data/data_cm.yaml`),
-* using an existing aligned FASTA file (see `QutRNA2/examples/data/data_afasta.yaml`), or
-* a direct mapping of sequence to Sprinzl coordinates (see `QutRNA2/examples/data/data_seq_to_sprinzl.yaml`)).
-
-Those files are templates and must be adjusted to the user's needs.
-
-## Setup data configuration
-First, define your `<SAMPLE_DESC>`. This file holds sample-specific information, such as "condition", "sample_name", "subsample", and "fastq" or "bam" - they directly correspond to columns - see `examples/sample_table_fastq.tsv`.
-Data for entries with the same "sample_name" will be merged - they represent technical replicates. For historical reasons, the column "base_calling" is present. Set it to "pass". Finally, the column "fastq" should point to the path of the compressed (gzip) fastq file.
-
-Second, define your `<DATA_YAML>`. This file describes what reference and Sprinzl coordinates (if any) to use. See `examples/data/*.yaml`. Make sure to add your `<SAMPLE_DESC>`. Provide "ref_fasta" and define what Sprinzl coordinates to use and the size of the adapters used! Correct adapter lengths are essential!
-
-### Sprinzl
-
-**Automatic labeling (recommended):** in your data YAML, set `qutrna2.sprinzl.scheme` to one of `euk`, `arch`, `bact`, `mito`, matching your tRNAs. [sprinx](https://github.com/dieterich-lab/sprinx) then picks a covariance model, aligns your tRNAs against it, and assigns each Sprinzl position from the resulting structure. See `examples/data/data_auto.yaml` for a template.
-
-- `mito` accounts for tRNAs that may have lost an arm (common in some mitochondrial genomes): it tries several CMs and diagnoses arm loss rather than assuming a cloverleaf structure. `euk`/`arch`/`bact` assume no arm loss and select from a combined CM database instead.
-- sprinx ships with default CMs for each scheme; override them with `qutrna2.sprinzl.mito.canonical_cm` (a list) and `qutrna2.sprinzl.mito.armless_cm_dir` for `scheme: mito`, or `qutrna2.sprinzl.cyto.cyto_cm_db` for `scheme: euk`/`arch`/`bact`.
-- each tRNA ID (the header up to the first space) needs its amino acid and anticodon, as `id|aa|anticodon|taxon` or a GtRNAdb-style name like `tRNA-Ala-TGC`. Descriptions are dropped. The pipeline checks every ID before it starts.
-- rename mitochondrial gene symbols (`MT-TA`, `mt-Ta`) accordingly, e.g. `mt-tRNA-Ala-TGC`.
-- which Sprinzl labels get plotted, and in what order, is derived from the labels sprinx assigns. Set `qutrna2.sprinzl.labels` to override this list yourself, e.g. to drop a position from the heatmap by setting it to `-`.
-
-**Manual / precomputed:** In the QutRNA2 publication, for eukaryotic nuclear tRNAs, we used the covariance model [TRNAinf-euk.cm](https://github.com/UCSC-LoweLab/tRAX/blob/master/TRNAinf-euk.cm) and corresponding labels in `data/nuclear-euk-masked.txt`. To use this approach yourself, set `qutrna2.sprinzl.cm` together with `qutrna2.sprinzl.labels` (or `qutrna2.sprinzl.label`) to supply your own CM and a Sprinzl labels file. 
-The latter is required in this mode of running QutRNA2.
-
-For human mt-tRNAs, use the sequence to Sprinzl mapping from [https://www.nature.com/articles/s41467-020-18068-6](https://www.nature.com/articles/s41467-020-18068-6), available in `data/human_mt_seq_to_sprinzl.tsv` (`data/human_mt_sprinzl_labels.txt` is an optional override for which labels are plotted).
-
-You need to obtain covariance models for the organism and tRNAs studied, if you'd like to use the
-manual approach. These models can be acquired, for example, from [https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models](https://github.com/UCSC-LoweLab/tRNAscan-SE/tree/master/lib/models).
-
-## Setup analysis configuration
-Finally, define `<ANALYSIS_YAML>`. Here, the workflow is manipulated, and custom plots are defined. Check `examples/analysis/*.yaml` for examples. For the recommended GPU run, use `examples/analysis//map_with_gpu.yaml` as your template. Use `examples/analysis/map_with_parasail.yaml` instead as a template if you don't use GPU and would like to use parasail. Expect significantly longer runtimes.
-
-Add any necessary init code for the GPU and provide paths for JACUSA2 and gpu-tRNA-mapper if they are not in the standard path.
-
-## Examples
-
-## Execute workflow
-
-### Run using the Conda environment
-If not done yet, activate qutrna2 conda environment:
-```console
-conda activate qutrna2
+```
+results/jacusa2/cond1~wt/cond2~KO/bam~final/          JACUSA2.out, score tables, permutation.tsv
+results/plots/normalized/cond1~wt/cond2~KO/bam~final/ normalized_heatmap.pdf, all tRNAs
+results/plots/normalized/cond1~wt/cond2~KO/<id>/bam~final/ normalized_heatmap.pdf, one per plots.heatmap entry
+results/plots/scores/cond1~wt/cond2~KO/<id>/bam~final/ one folder per entry with subsampled: true
 ```
 
-Use `<ANALYSIS_OUTPUT>` folder to define where QutRNA2 should write the output to:
-```console
-snakemake \
-    -c 1 \
-    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
-    --use-conda \
-    --configfiles <ANALYSIS_YAML> \
-        --config pepfile=<DATA_YAML> \
-        --directory <ANALYSIS_OUTPUT> \
-    -n
-```
-The `-n` is to do a dry run of the pipeline. You should see a list of necessary jobs to be run and hopefully no errors.
-You should increase `-c 1` to whatever suits your computing machine.
+| path | content |
+|---|---|
+| `results/report/report.html` | heatmaps, read counts, configs, versions and file paths |
+| `results/bam/{mapped,filtered-*,final}/` | alignments per filter step, by sample and subsample |
+| `results/stats/` | read counts, lengths and alignment scores per filter step |
+| `results/ss/seq_to_sprinzl_filtered.tsv` | the Sprinzl mapping used |
+| `results/cmalign/align.stk` | the structure alignment, with a covariance model |
+| `results/data/` | the processed reference |
+| `data/` | the inputs, as the run read them |
+| `logs/`, `info/` | job logs, configs and versions |
 
-if you have no errors and a clean dry run, you can start the analysis (remove `-n`):
+### Report
 
-```console
-snakemake \
-    -c 1 \
-    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
-    --use-conda \
-    --configfiles <ANALYSIS_YAML> \
-        --config pepfile=<DATA_YAML> \
-        --directory <ANALYSIS_OUTPUT>
-```
+The report has five tabs:
 
-### Run using the container
+- **Overview**: run directory, configs, filters, sample table, tool versions and commits.
+- **Preprocessing**: read counts and lengths after each filter.
+- **Results**: one sub-tab per contrast. First the normalized heatmap of all tRNAs, then one per `plots.heatmap` entry.
+- **Files**: paths to BAMs, score tables, permutation tables and all plots, including those the report does not show.
+- **Configuration**: the YAML files of the run.
 
-The Snakemake command is now the same as above but without `--use-conda`, and it is called as part of a Singularity command:
+Images are embedded. The file is self-contained and can reach tens of MB.
 
-```console
-singularity run \
-  --nv \
-  --bind <HOST_DATA_DIR>:<HOST_DATA_DIR> \
-  <PATH_TO_SIF>/qutrna2.sif \
-  snakemake \
-    --cores <N_CORES> \
-    --snakefile <QUTRNA2_LOCAL_DIR>/workflow/Snakefile \
-    --configfiles <ANALYSIS_YAML> \
-        --config pepfile=<DATA_YAML> \
-        --directory <ANALYSIS_OUTPUT>
-```
+### Normalized heatmap
 
-- `singularity run --nv` enables GPU access inside the container (required for gpu-tRNA-mapper).
-- `singularity run --bind` mounts a host directory into the container so input/output paths remain accessible. Bind all directories referenced in your YAML configs or a parent directory.
-- `snakemake --executor local` is recommended when running inside a SLURM job (i.e. resource allocation is already handled by SLURM). Set `--cores` to the number of cores allocated to your job (e.g. `$SLURM_CPUS_ON_NODE`).
-
-## Results
-When the analysis is finished, the `<ANALYSIS_OUTPUT>` directory will contain the following subdirectories:
-"data", "info", "logs", and "results".
-
-`<ANALYSIS_OUTPUT>/data/` will contain all unprocessed data used in the analysis.
-`<ANALYSIS_OUTPUT>/info/` will contain runtime information and the configuration files used to track parameters.
-`<ANALYSIS_OUTPUT>/logs/` will contain logs for executed jobs.
-`<ANALYSIS_OUTPUT>/results/` will contain all calculations.
-
-### report
-`<ANALYSIS_OUTPUT>/results/report/report.html` is the entry point to a finished run. Five tabs:
-
-- **Overview** - working directory, config files, filters applied, the sample table, and the versions of QutRNA2, JACUSA2, Infernal, gpu-tRNA-mapper and sprinx. QutRNA2 and sprinx also record the commit they were built from.
-- **Preprocessing** - read count and read length plots, showing what each filter removed.
-- **Results** - the heatmaps, one sub-tab per contrast: the permutation-normalized heatmap first (see [Plots](#plots)), then each heatmap configured under `plots.heatmap`.
-- **Files** - paths to the final BAMs, the score and permutation tables and every plot, including the ones that the report does not embed.
-- **Configuration** - the analysis and data YAML that was used for the pipeline run.
-
-Images are embedded as data URIs. The HTML file therefore opens anywhere without its plot directory, and a run with many contrasts can produce a report as large as tens of MB.
-
-
-### data
-The directory `<ANALYSIS_OUTPUT>/results/data` will contain processed instances of the reference sequence.
-
-### Alignments
-Alignments are stored in `<ANALYSIS_OUTPUT>/results/bam/<read-type>/...`. `<read-type>` corresponds to mapped, filtered, and final reads. The BAMs in the subdirectory "final" are used to calculate JACUSA2 score profiles.
-Each subdirectory is organised according to "sample_name", "subsample_name", and "base_calling" columns from `<SAMPLE_DESC>`.
-
-### cmalign
-If a covariance model was provided in `<DATA_YAML>`, the secondary structure alignment under `<ANALYSIS_OUTPUT>/results/cmalign/align.stk` will be generated.
-
-### jacusa2
-The directory `<ANALYSIS_OUTPUT>/results/jacusa2` will contain JACUSA2 results for defined contrasts.
-
-## Plots
-The directory `<ANALYSIS_OUTPUT>/results/plots` will contain plots. These are heatmaps of the JACUSA2 scores across tRNA positions or all tRNAs that the reads were mapped to and retained after filtering.
-
-Check `<ANALYSIS_OUTPUT>/results/plots/scores/cond1~{cond1}/cond2~{cond2}/{id}/bam~final/subsampling_normalized_heatmap.pdf`.
-
-`<ANALYSIS_OUTPUT>/results/plots/normalized/cond1~{cond1}/cond2~{cond2}/bam~final/normalized_heatmap.pdf` shows the permutation-normalized score of each contrast. At each position, the reads of every replicate of both conditions are pooled and dealt back at random, each replicate keeping its own depth, and each permutation is scored as JACUSA2 scores the data. A tile's colour is the observed score minus the highest permutation score, summed over mismatches, deletions and insertions. The p of each error type is the share of permutations scoring at or above the observed score, with one Benjamini-Hochberg correction over all three error types. A large tile marks a position whose lowest FDR is below `jacusa2.fdr`, 0.05 by default. The number of permutations is set under `jacusa2.permutation`. The table behind it is `<ANALYSIS_OUTPUT>/results/jacusa2/cond1~{cond1}/cond2~{cond2}/bam~final/permutation.tsv`.
-
-### stats
-If filters were applied, the directory `<ANALYSIS_OUTPUT>/results/stats` will contain summary statistics for features such as alignment score, read length, and read count.
-
-### secondary structure (ss)
-`<ANALYSIS_OUTPUT>/results/seq_to_sprinzl_filtered.tsv` will contain the sequence to sprinzl mapping.
-
+- At each position, the reads of all replicates are pooled.
+- They are dealt back at random. Each replicate keeps its depth.
+- Each permutation is scored like the data.
+- A tile's colour is the observed score minus the highest permuted score. It is summed over mismatches, deletions and insertions.
+- The p value is the share of permutations that score at or above the data.
+- One Benjamini-Hochberg correction is applied over all three error types. Three FDRs are given per position: mismatch, deletion and insertion.
+- A position is called when any of its three FDRs is below `jacusa2.fdr` (default 0.05). Called positions are drawn as large tiles.
+- The number of permutations is set in `jacusa2.permutation`.
