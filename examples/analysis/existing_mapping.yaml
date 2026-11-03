@@ -2,6 +2,8 @@
 # Make sure that the corresponding BAM files are listed in the sample table in the "bam" column.
 # Occasionally, default values are shown, and a short description of the options is provided.
 
+name: example run # shown in the report title
+
 jacusa2: # JACUSA2 related parameters
   jar: JACUSA2 # (optional) overwrite default path to JACUSA2 jar
   # (optional) overwrite default parameters to JACUSA2

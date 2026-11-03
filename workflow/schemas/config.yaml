@@ -7,6 +7,9 @@ properties:
   pepfile:
     type: string
     description: Sample description
+  name:
+    type: string
+    description: name of the run in the report title. Default the run directory's folder name
   include:
     type: object
     properties:

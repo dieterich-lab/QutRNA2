@@ -1,6 +1,8 @@
 # The following contains a template config for mapping reads with the GPU and some examples how to setup plots.
 # Occasionally, default values are shown, and a short description of the options is provided.
 
+name: example run # shown in the report title
+
 alignment:
   method: gpu # method to use for mapping
 

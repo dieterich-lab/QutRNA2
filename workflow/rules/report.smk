@@ -84,6 +84,7 @@ rule report_create_params:
       "pep_str": yaml.dump(pep.to_dict()),
       "basedir": workflow.basedir,
       "workdir": os.getcwd(),
+      "name": config.get("name") or os.path.basename(os.getcwd()),
       "configfiles": [str(f) for f in workflow.configfiles],
       "pepfile": config["pepfile"],
       "filters_applied": FILTERS_APPLIED,
