@@ -3,7 +3,7 @@ import os
 from snakemake.io import expand
 
 
-VERSION = "2.2.0"
+VERSION = "2.2.1"
 
 pepfile: config["pepfile"]
 pepschema: "schemas/pep.yaml"
