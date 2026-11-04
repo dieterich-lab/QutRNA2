@@ -188,11 +188,13 @@ rule plot_normalized_heatmap:
   conda: "qutrna2"
   log: "logs/plot/normalized_heatmap/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.log"
   params: sprinzl=lambda wildcards, input: f"--sprinzl {input.sprinzl}" if "sprinzl" in input.keys() else "",
-          fdr=config["jacusa2"]["fdr"]
+          fdr=config["jacusa2"]["fdr"],
+          linker5=pep.config["qutrna2"]["linker5"]
   shell: """
     python {workflow.basedir:q}/scripts/plot_norm_heatmap.py \
         --conditions '{wildcards.COND1},{wildcards.COND2}' \
         --fdr {params.fdr} \
+        --five_adapter {params.linker5} \
         --out {output.pdf:q} \
         {params.sprinzl} \
         {input.perm:q} > {log:q} 2>&1
@@ -255,12 +257,14 @@ rule plot_normalized_heatmap_set:
   params: sprinzl=lambda wildcards, input: f"--sprinzl {input.sprinzl}" if "sprinzl" in input.keys() else "",
           fdr=config["jacusa2"]["fdr"],
           opts=_normalized_set_opts,
+          linker5=pep.config["qutrna2"]["linker5"],
           title=lambda wildcards: f"{wildcards.COND1}, {wildcards.COND2}, normalized score, "
                                   f"{norm_score_label(get_plot('heatmap', wildcards.plot_id))}"
   shell: """
     python {workflow.basedir:q}/scripts/plot_norm_heatmap.py \
         --conditions '{wildcards.COND1},{wildcards.COND2}' \
         --fdr {params.fdr} \
+        --five_adapter {params.linker5} \
         --title {params.title:q} \
         {params.opts} \
         --out {output.pdf:q} \

@@ -91,6 +91,7 @@ def relabel(table, sprinzl):
 
 def keep(table, args):
     """Apply the tRNA, depth and label filters, and name the x axis."""
+    table = table[table.position > args.five_adapter]
     table, xlabel = relabel(table, args.sprinzl)
     if args.trnas:
         table = table[table.contig.str.contains(args.trnas, regex=True)]
@@ -326,6 +327,8 @@ def main():
                         help="a scores_sprinzl.tsv of the same contrast")
     parser.add_argument("--remove_prefix", default="",
                         help="dropped from every tRNA name, e.g. tRNA-")
+    parser.add_argument("--five_adapter", type=int, default=0,
+                        help="5' adapter length. its positions are dropped")
     parser.add_argument("--hide_varm", action="store_true",
                         help="drop the variable arm labels, e1 to e27")
     parser.add_argument("--title", default="")
