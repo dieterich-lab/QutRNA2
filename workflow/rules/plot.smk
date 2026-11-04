@@ -206,6 +206,9 @@ def _normalized_set_opts(wildcards):
            "--min_reads": "--min_reads", "--remove_prefix": "--remove_prefix"}
   opts = [f"{new}={shlex.quote(value)}" for old, new in flags.items()
           if (value := heatmap_opt(plot, old))]
+  # a bare flag, which heatmap_opt does not read
+  if "--hide_varm" in shlex.split(plot.get("opts") or ""):
+    opts.append("--hide_varm")
   if plot.get("coverage_split"):
     opts.append("--coverage_split")
   elif plot.get("group"):

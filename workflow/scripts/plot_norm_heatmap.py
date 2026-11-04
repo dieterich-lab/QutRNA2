@@ -23,6 +23,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.patches import Rectangle
 from matplotlib.textpath import TextPath
 from matplotlib.ticker import AutoMinorLocator, FuncFormatter, MaxNLocator
+from sprinzl_utils import _label_sort_key
 
 TYPES = ("mismatch", "deletion", "insertion")
 SCORE = re.compile(r"^perm_(\w+)_score_minus_max_null$")
@@ -103,11 +104,16 @@ def keep(table, args):
             contig=table.contig.str.removeprefix(args.remove_prefix))
     # an unlabelled position is a dot. It is dropped from the columns
     table = table.assign(position=table.position.astype(str))
+    if args.hide_varm:
+        table = table[~table.position.str.contains(r"e\d")]
     return table[table.position != "."], xlabel
 
 
-def ordered(table):
+def ordered(table, sprinzl):
     """Position labels in their order along the tRNA."""
+    # median start puts variable arm labels among the core positions
+    if sprinzl:
+        return sorted(table.position.unique(), key=_label_sort_key)
     order = table.groupby("position", sort=False).start.median()
     return [str(name) for name in order.sort_values().index]
 
@@ -320,6 +326,8 @@ def main():
                         help="a scores_sprinzl.tsv of the same contrast")
     parser.add_argument("--remove_prefix", default="",
                         help="dropped from every tRNA name, e.g. tRNA-")
+    parser.add_argument("--hide_varm", action="store_true",
+                        help="drop the variable arm labels, e1 to e27")
     parser.add_argument("--title", default="")
     parser.add_argument("--conditions",
                         help="two names, comma separated, e.g. WT,QTRT1. "
@@ -354,7 +362,7 @@ def main():
         parser.error("no tRNA survives the filters")
 
     trnas = sorted(table.contig.unique())
-    positions = ordered(table)
+    positions = ordered(table, args.sprinzl)
     rows, labels = layout(blocks(table, trnas, args))
     cells = grid(table, rows, positions)
     scale = Normalize(0, colour_top(table, columns, args) or 1)
