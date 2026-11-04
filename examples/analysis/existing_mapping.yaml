@@ -67,8 +67,8 @@ plots:
       opts: "--trnas='Asp-GTC|Asn-GTT|His-GTG|Tyr-GTA' --mark_positions=':34$' --min_reads=30"
       # columns of permutation.tsv that are summed. By default, all three are summed
       norm_score: perm_mismatch_score_minus_max_null+perm_deletion_score_minus_max_null+perm_insertion_score_minus_max_null
-      # one block per amino acid, or coverage_split: true for blocks by median coverage
-      group: amino_acid
+      # blocks of tRNAs by median coverage. without it, group: amino_acid gives one block per amino acid
+      coverage_split: true
       # top of the colour scale: NONE, a number, CONTRASTS (one scale over this entry's contrasts) or OVERALL
       harmonize_scaling: CONTRASTS
       # the subsampling normalized score is also drawn, and listed under Files in the report

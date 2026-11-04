@@ -51,7 +51,9 @@ rule jacusa2_run:
           min_cov=config["jacusa2"]["min_cov"],
           bam1=lambda wildcards,input: ",".join(input.bam1),
           bam2=lambda wildcards,input: ",".join(input.bam2)
-  threads: 1
+  # threads move only the subsampled columns (JACUSA2 seeding bug); score and
+  # the permutation are unchanged
+  threads: lambda wildcards: workflow.cores
   shell: """
     {params.jar} call-2 \
         -R {input.ref} \
