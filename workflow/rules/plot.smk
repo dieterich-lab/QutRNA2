@@ -189,20 +189,21 @@ rule plot_normalized_heatmap:
   log: "logs/plot/normalized_heatmap/cond1~{COND1}/cond2~{COND2}/bam~{bam_type}.log"
   params: sprinzl=lambda wildcards, input: f"--sprinzl {input.sprinzl}" if "sprinzl" in input.keys() else "",
           fdr=config["jacusa2"]["fdr"],
+          opts=lambda wildcards: _norm_opts(config["plots"].get("all_trnas", {})),
           linker5=pep.config["qutrna2"]["linker5"]
   shell: """
     python {workflow.basedir:q}/scripts/plot_norm_heatmap.py \
         --conditions '{wildcards.COND1},{wildcards.COND2}' \
         --fdr {params.fdr} \
         --five_adapter {params.linker5} \
+        {params.opts} \
         --out {output.pdf:q} \
         {params.sprinzl} \
         {input.perm:q} > {log:q} 2>&1
   """
 
 
-def _normalized_set_opts(wildcards):
-  plot = get_plot("heatmap", wildcards.plot_id)
+def _norm_opts(plot):
   # the entry's plot_heatmap.R flags, under plot_norm_heatmap.py's names
   flags = {"--trnas": "--trnas", "--mark_positions": "--mark",
            "--min_reads": "--min_reads", "--remove_prefix": "--remove_prefix"}
@@ -218,9 +219,14 @@ def _normalized_set_opts(wildcards):
   scaling = str(plot.get("harmonize_scaling", "NONE"))
   if scaling.replace(".", "", 1).isdigit():
     opts.append(f"--max_score={scaling}")
-  if (tables := _scale_tables(wildcards)):
-    opts.append(" ".join(["--scale_with", *tables]))
   return " ".join([f"--score_column={plot.get('norm_score', DEFAULT_NORM_SCORE)}", *opts])
+
+
+def _normalized_set_opts(wildcards):
+  opts = _norm_opts(get_plot("heatmap", wildcards.plot_id))
+  if (tables := _scale_tables(wildcards)):
+    opts += " " + " ".join(["--scale_with", *tables])
+  return opts
 
 
 def _scale_tables(wildcards):

@@ -68,6 +68,10 @@ plots:
     # Use "--show_percent" to add additional info to the plots
     - id: show_percent
       opts: --show_percent
+  all_trnas: # the heatmap of all tRNAs, one per contrast. Keys as in a heatmap entry
+    coverage_split: true
+    # hide the variable arm and box G34 of the Q substrate tRNAs
+    opts: "--hide_varm --mark_positions='(Asp-GTC|Asn-GTT|His-GTG|Tyr-GTA)[^:]*:34$' --min_reads=30"
   heatmap: # each entry is drawn with the normalized score, one heatmap per contrast
     - id: Q34_substrates
       # tRNAs selected by regex, and positions boxed. Both are adapted to the reference

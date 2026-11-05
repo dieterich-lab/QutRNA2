@@ -266,6 +266,18 @@ properties:
           required:
             - id
             - opts
+      all_trnas:
+        description: the normalized heatmap over all tRNAs, drawn for every contrast. opts, coverage_split and norm_score as in a heatmap entry
+        type: object
+        default: {}
+        properties:
+          opts:
+            type: string
+          coverage_split:
+            type: boolean
+            default: false
+          norm_score:
+            type: string
       heatmap:
         type: array
         default: []
